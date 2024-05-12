@@ -1,0 +1,35 @@
+@import 'global';
+
+.desc {
+  color: $text-secondary;
+}
+
+input.full {
+  box-sizing: border-box;
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 16px;
+
+  color: $text-primary;
+  font-size: 16px;
+
+  background-color: $background-light;
+}
+
+button.submit {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: bold;
+
+  border: 0;
+  border-radius: 8px;
+
+  background-color: $background-lighter;
+
+  &:hover {
+    background-color: $highlight-primary;
+  }
+}

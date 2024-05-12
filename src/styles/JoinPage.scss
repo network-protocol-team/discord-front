@@ -14,4 +14,28 @@
   flex-direction: column;
   justify-content: start;
   align-items: center;
+
+  background-color: $background-dark;
+  border-radius: 16px;
+
+  padding: 32px;
+
+  .icon {
+    margin-bottom: 32px;
+  }
+
+  header {
+    h1 {
+      margin: 0;
+    }
+    margin-bottom: 16px;
+  }
+
+  form {
+    * {
+      margin: 4px 0;
+    }
+
+    width: 100%;
+  }
 }
