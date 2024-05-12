@@ -14,4 +14,60 @@
   flex-direction: column;
   justify-content: start;
   align-items: center;
+
+  background-color: $background-dark;
+  border-radius: 16px;
+
+  padding: 32px;
+
+  .icon {
+    margin-bottom: 32px;
+  }
+
+  header {
+    h1 {
+      margin: 0;
+    }
+    margin-bottom: 16px;
+  }
+
+  form {
+    * {
+      margin: 4px 0;
+    }
+    p {
+      color: $text-secondary;
+    }
+
+    input {
+      box-sizing: border-box;
+      width: 100%;
+      border: 0;
+      border-radius: 8px;
+      padding: 16px;
+
+      color: $text-primary;
+      font-size: 16px;
+
+      background-color: $background-light;
+    }
+
+    button {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: bold;
+
+      border: 0;
+      border-radius: 8px;
+
+      background-color: $background-lighter;
+
+      &:hover {
+        background-color: $highlight-primary;
+      }
+    }
+    width: 100%;
+  }
 }
