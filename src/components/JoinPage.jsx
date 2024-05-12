@@ -12,9 +12,11 @@ export default function JoinPage() {
             <p>시작하기 앞서 채팅에 사용할 닉네임을 입력해야 해요.</p>
           </header>
           <form>
-            <p>닉네임</p>
-            <input autoFocus />
-            <button type="submit">로그인</button>
+            <p className="desc">닉네임</p>
+            <input className="full" autoFocus />
+            <button type="submit" className="submit">
+              로그인
+            </button>
           </form>
         </div>
       </main>

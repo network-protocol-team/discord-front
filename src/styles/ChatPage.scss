@@ -2,6 +2,9 @@
 @import 'TextRoom';
 @import 'VideoRoom';
 
+.desc {
+}
+
 .chat-wrapper {
   width: 100dvw;
   height: 100dvh;
@@ -125,4 +128,41 @@
   border-radius: 100px;
 
   margin-right: 10px;
+}
+
+.MuiModal-root {
+  height: 100%;
+
+  display: flex;
+  justify-content: center;
+}
+
+.modal-box {
+  margin: auto;
+  height: fit-content;
+
+  min-width: 400px;
+
+  background-color: $background-dark;
+  border-radius: 16px;
+
+  padding: 32px;
+
+  header {
+    margin-bottom: 64px;
+
+    * {
+      margin: 8px;
+    }
+  }
+
+  form {
+    * {
+      margin: 4px 0;
+    }
+  }
+
+  &:focus {
+    outline: none;
+  }
 }
