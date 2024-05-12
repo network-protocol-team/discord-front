@@ -1,0 +1,45 @@
+@import 'global';
+
+.video-chat-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.video-grid {
+  margin: auto;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.video-box {
+  aspect-ratio: 16 / 9;
+  max-width: 100%;
+  min-width: 300px;
+  background-color: $highlight-primary;
+}
+
+.video-buttons {
+  margin: 0 auto;
+  display: flex;
+  gap: 32px;
+
+  button {
+    border-radius: 100px;
+    aspect-ratio: 1/1;
+    width: 60px;
+    border: 0;
+    background-color: $background-dark;
+    color: $text-primary;
+
+    &.end {
+      background-color: $red;
+    }
+  }
+}
