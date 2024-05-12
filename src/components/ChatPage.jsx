@@ -10,7 +10,7 @@ export default function ChatPage() {
   return (
     <main className="chat-wrapper">
       <ChatList />
-      <ChatRoom />
+      <ChatRoom channelId={channelId} />
     </main>
   );
 }

@@ -1,7 +1,7 @@
-import '../styles/ChatPage.scss';
 import LogoutIcon from '@mui/icons-material/Logout';
 import TagIcon from '@mui/icons-material/Tag';
 import ProfileImage from '../assets/sample.png';
+import MapsUgcIcon from '@mui/icons-material/MapsUgc';
 
 export default function ChatList() {
   const chatRooms = [
@@ -19,9 +19,9 @@ export default function ChatList() {
     <div className="chat-list">
       <header>
         <h3>채널</h3>
-        <h3>+</h3>
+        <MapsUgcIcon />
       </header>
-      <hr />
+      <hr className="hr-light" />
       <ul>
         {chatRooms.map(({ channelName }, idx) => (
           <li key={idx}>
