@@ -59,6 +59,15 @@
       &:hover {
         background-color: $background-light;
         color: $text-primary;
+
+        .delete {
+          display: block;
+        }
+      }
+
+      .delete {
+        display: none;
+        margin-left: auto;
       }
     }
   }

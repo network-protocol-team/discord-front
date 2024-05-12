@@ -2,6 +2,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import TagIcon from '@mui/icons-material/Tag';
 import ProfileImage from '../assets/sample.png';
 import MapsUgcIcon from '@mui/icons-material/MapsUgc';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 export default function ChatList() {
   const chatRooms = [
@@ -27,6 +28,7 @@ export default function ChatList() {
           <li key={idx}>
             <TagIcon />
             <p>{channelName}</p>
+            <DeleteIcon className="delete" />
           </li>
         ))}
       </ul>
