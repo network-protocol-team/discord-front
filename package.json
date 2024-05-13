@@ -15,13 +15,15 @@
     "@mui/icons-material": "^5.15.17",
     "@mui/material": "^5.15.17",
     "@stomp/stompjs": "^7.0.0",
+    "axios": "^1.6.8",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-modal": "^3.16.1",
     "react-router-dom": "^6.23.1",
     "sass": "^1.77.1",
     "sockjs-client": "^1.6.1",
-    "styled-components": "^6.1.11"
+    "styled-components": "^6.1.11",
+    "zustand": "^4.5.2"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",

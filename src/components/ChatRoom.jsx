@@ -1,10 +1,8 @@
+import { useChatStore } from '../data/store';
 import TextChatRoom from './TextChatRoom';
 import VideoChatRoom from './VideoChatRoom';
 
 export default function ChatRoom({ channelId }) {
-  // TODO: 상태관리 library 사용
-  const channelName = '채널 1';
-
   return (
     <>
       {channelId === undefined ? (

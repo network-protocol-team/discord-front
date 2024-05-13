@@ -3,8 +3,11 @@ import Profile from './Profile';
 import ProfileImage from '../assets/sample.png';
 import SendIcon from '@mui/icons-material/Send';
 import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
+import { useChatStore } from '../data/store';
 
 export default function TextChatRoom() {
+  const selectedChatRoom = useChatStore((state) => state.selectedChatRoom);
+
   const textareaRef = useRef();
 
   const handleResizeHeight = () => {
@@ -18,7 +21,7 @@ export default function TextChatRoom() {
         <div className="text-room">
           <header className="text-room-header">
             <ChatBubbleIcon />
-            <h3 className="title">채널 1</h3>
+            <h3 className="title">{selectedChatRoom?.channelName}</h3>
           </header>
           <hr className="hr-light" />
           <div className="message-list">

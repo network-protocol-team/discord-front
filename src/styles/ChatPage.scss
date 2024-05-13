@@ -66,6 +66,17 @@
         .delete {
           display: block;
         }
+
+        cursor: pointer;
+      }
+
+      &.active {
+        background-color: $background-light;
+        color: $text-primary;
+
+        .delete {
+          display: block;
+        }
       }
 
       .delete {
