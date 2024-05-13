@@ -5,19 +5,13 @@ import MapsUgcIcon from '@mui/icons-material/MapsUgc';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useState } from 'react';
 import { Modal } from '@mui/material';
+import { chatRooms } from '../data/mockChat';
+import { useNavigate } from 'react-router-dom';
+import { useChatStore } from '../data/store';
 
 export default function ChatList() {
-  const chatRooms = [
-    { id: '', channelName: '채널 1' },
-    { id: '', channelName: '채널 2' },
-    { id: '', channelName: '채널 3' },
-    { id: '', channelName: '채널 4' },
-    { id: '', channelName: '채널 5' },
-    { id: '', channelName: '채널 6' },
-    { id: '', channelName: '채널 7' },
-    { id: '', channelName: '채널 8' },
-  ];
-
+  const navigation = useNavigate();
+  const resetStore = useChatStore((state) => state.reset);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const openModal = () => {
@@ -27,46 +21,67 @@ export default function ChatList() {
     setIsModalOpen(false);
   };
 
+  const logout = () => {
+    // TODO: 쿠키 및 클라이언트 상태 삭제
+    navigation('/users');
+    resetStore();
+  };
+
   return (
-    <div className="chat-list">
+    <>
       <Modal open={isModalOpen} onClose={closeModal}>
-        <ChatCreateModal />
+        <div className="modal-box">
+          <header>
+            <h1>새로운 채널 만들기</h1>
+            <p>새롭게 만들 채널의 이름을 입력해주세요.</p>
+          </header>
+          <form>
+            <p className="desc">채널 이름</p>
+            <input autoFocus className="full" />
+            <button className="submit">채널 생성</button>
+          </form>
+        </div>
       </Modal>
-      <header>
-        <h3>채널</h3>
-        <MapsUgcIcon onClick={openModal} />
-      </header>
-      <hr className="hr-light" />
-      <ul>
-        {chatRooms.map(({ channelName }, idx) => (
-          <li key={idx}>
-            <TagIcon />
-            <p>{channelName}</p>
-            <DeleteIcon className="delete" />
-          </li>
-        ))}
-      </ul>
-      <footer>
-        <img src={ProfileImage} alt="프로필 사진" />
-        <p>익명의 카멜레온</p>
-        <LogoutIcon />
-      </footer>
-    </div>
+      <div className="chat-list">
+        <header>
+          <h3>채널</h3>
+          <MapsUgcIcon className="new-chat-button" onClick={openModal} />
+        </header>
+        <hr className="hr-light" />
+        <ul>
+          {chatRooms.map(({ channelName, channelId }) => (
+            <ChatListItem
+              channelName={channelName}
+              channelId={channelId}
+              key={channelId}
+            />
+          ))}
+        </ul>
+        <footer>
+          <img src={ProfileImage} alt="프로필 사진" />
+          <p>익명의 카멜레온</p>
+          <LogoutIcon onClick={logout} />
+        </footer>
+      </div>
+    </>
   );
 }
 
-const ChatCreateModal = () => {
+const ChatListItem = ({ channelName, channelId }) => {
+  const navigate = useNavigate();
+  const selectedId = useChatStore((state) => state.selectedId);
+  const selectItem = (id) => {
+    navigate(`/channels/${id}`);
+  };
+
   return (
-    <div className="modal-box">
-      <header>
-        <h1>새로운 채널 만들기</h1>
-        <p>새롭게 만들 채널의 이름을 입력해주세요.</p>
-      </header>
-      <form>
-        <p className="desc">채널 이름</p>
-        <input autoFocus className="full" />
-        <button className="submit">채널 생성</button>
-      </form>
-    </div>
+    <li
+      onClick={() => selectItem(channelId)}
+      className={selectedId === channelId ? 'active' : ''}
+    >
+      <TagIcon />
+      <p>{channelName}</p>
+      <DeleteIcon className="delete" />
+    </li>
   );
 };
