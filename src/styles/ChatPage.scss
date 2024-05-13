@@ -39,6 +39,10 @@
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
+
+    .new-chat-button:hover {
+      cursor: pointer;
+    }
   }
 
   > ul {
@@ -107,6 +111,10 @@
 
     svg {
       margin-left: auto;
+
+      &:hover {
+        cursor: pointer;
+      }
     }
   }
 }

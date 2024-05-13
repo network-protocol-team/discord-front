@@ -41,5 +41,9 @@
     &.end {
       background-color: $red;
     }
+
+    &:hover {
+      cursor: pointer;
+    }
   }
 }

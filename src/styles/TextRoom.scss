@@ -86,5 +86,9 @@
   svg {
     margin-left: auto;
     color: $text-secondary;
+
+    &:hover {
+      cursor: pointer;
+    }
   }
 }

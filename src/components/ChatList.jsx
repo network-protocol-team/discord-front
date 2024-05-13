@@ -37,7 +37,7 @@ export default function ChatList() {
       <div className="chat-list">
         <header>
           <h3>채널</h3>
-          <MapsUgcIcon onClick={openModal} />
+          <MapsUgcIcon className="new-chat-button" onClick={openModal} />
         </header>
         <hr className="hr-light" />
         <ul>
