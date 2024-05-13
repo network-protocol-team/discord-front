@@ -10,6 +10,8 @@ import { useNavigate } from 'react-router-dom';
 import { useChatStore } from '../data/store';
 
 export default function ChatList() {
+  const navigation = useNavigate();
+  const resetStore = useChatStore((state) => state.reset);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const openModal = () => {
@@ -17,6 +19,12 @@ export default function ChatList() {
   };
   const closeModal = () => {
     setIsModalOpen(false);
+  };
+
+  const logout = () => {
+    // TODO: 쿠키 및 클라이언트 상태 삭제
+    navigation('/users');
+    resetStore();
   };
 
   return (
@@ -52,7 +60,7 @@ export default function ChatList() {
         <footer>
           <img src={ProfileImage} alt="프로필 사진" />
           <p>익명의 카멜레온</p>
-          <LogoutIcon />
+          <LogoutIcon onClick={logout} />
         </footer>
       </div>
     </>
