@@ -5,12 +5,12 @@ import MapsUgcIcon from '@mui/icons-material/MapsUgc';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useState } from 'react';
 import { Modal } from '@mui/material';
-import { chatRooms } from '../data/mockChat';
 import { useNavigate } from 'react-router-dom';
 import { useChatStore } from '../data/store';
 
 export default function ChatList() {
   const navigation = useNavigate();
+  const channels = useChatStore((state) => state.channels);
   const resetStore = useChatStore((state) => state.reset);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -49,7 +49,7 @@ export default function ChatList() {
         </header>
         <hr className="hr-light" />
         <ul>
-          {chatRooms.map(({ channelName, channelId }) => (
+          {channels.map(({ channel_name: channelName, id: channelId }) => (
             <ChatListItem
               channelName={channelName}
               channelId={channelId}
