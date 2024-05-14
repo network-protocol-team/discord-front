@@ -13,11 +13,10 @@ export default function ChatPage() {
   const setChannels = useChatStore((state) => state.setChannels);
   const setSelectedId = useChatStore((state) => state.setSelectedId);
   const setSelectedChatRoom = useChatStore(
-    (state) => state.setSelectedChatRoom
+    (state) => state.setSelectedChatRoom,
   );
   // 이 부분에 추가
   useEffect(() => {
-
     if (channelId === undefined) return;
 
     const currRoom = channels.find(({ id }) => id === channelId);

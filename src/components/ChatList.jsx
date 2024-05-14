@@ -1,26 +1,14 @@
-<<<<<<< feat/api/jooho
-import LogoutIcon from "@mui/icons-material/Logout";
-import TagIcon from "@mui/icons-material/Tag";
-import ProfileImage from "../assets/sample.png";
-import MapsUgcIcon from "@mui/icons-material/MapsUgc";
-import DeleteIcon from "@mui/icons-material/Delete";
-import { useRef, useState } from "react";
-import axios from "axios";
-import { Modal } from "@mui/material";
-import { chatRooms } from "../data/mockChat";
-import { useNavigate } from "react-router-dom";
-import { useChatStore } from "../data/store";
-=======
 import LogoutIcon from '@mui/icons-material/Logout';
 import TagIcon from '@mui/icons-material/Tag';
 import ProfileImage from '../assets/sample.png';
 import MapsUgcIcon from '@mui/icons-material/MapsUgc';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import axios from 'axios';
 import { Modal } from '@mui/material';
+import { chatRooms } from '../data/mockChat';
 import { useNavigate } from 'react-router-dom';
 import { useChatStore } from '../data/store';
->>>>>>> feat/api/sungmin
 
 export default function ChatList() {
   const navigation = useNavigate();
@@ -42,21 +30,18 @@ export default function ChatList() {
     const data = { channel_name };
 
     axios
-    .post(`${serverUrl}/channels`, data)
-    .then((res) => res.data)
-    .then(({ result }) => {
-      chatRooms.push(result.id, result.channel_name);
-    });
-
+      .post(`${serverUrl}/channels`, data)
+      .then((res) => res.data)
+      .then(({ result }) => {
+        chatRooms.push(result.id, result.channel_name);
+      });
 
     e.preventDefault();
   };
 
-  
-
   const logout = () => {
     // TODO: 쿠키 및 클라이언트 상태 삭제
-    navigation("/users");
+    navigation('/users');
     resetStore();
   };
 
@@ -74,15 +59,14 @@ export default function ChatList() {
           </header>
           <form onSubmit={createRoom}>
             <p className="desc">채널 이름</p>
-            <input autoFocus className="full" 
+            <input
+              autoFocus
+              className="full"
               ref={inputRef}
               onChange={handleInputChange}
-              defaultValue="" />
-            <button
-              className="submit"
-            >
-              채널 생성
-            </button>
+              defaultValue=""
+            />
+            <button className="submit">채널 생성</button>
           </form>
         </div>
       </Modal>
@@ -121,7 +105,7 @@ const ChatListItem = ({ channelName, channelId }) => {
   return (
     <li
       onClick={() => selectItem(channelId)}
-      className={selectedId === channelId ? "active" : ""}
+      className={selectedId === channelId ? 'active' : ''}
     >
       <TagIcon />
       <p>{channelName}</p>
