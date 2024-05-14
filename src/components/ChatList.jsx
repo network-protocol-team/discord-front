@@ -6,13 +6,14 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useRef, useState } from 'react';
 import axios from 'axios';
 import { Modal } from '@mui/material';
-import { chatRooms } from '../data/mockChat';
 import { useNavigate } from 'react-router-dom';
 import { useChatStore } from '../data/store';
 
 export default function ChatList() {
   const navigation = useNavigate();
   const channels = useChatStore((state) => state.channels);
+  const setChannels = useChatStore((state) => state.setChannels);
+
   const resetStore = useChatStore((state) => state.reset);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const inputRef = useRef();
@@ -32,9 +33,23 @@ export default function ChatList() {
     axios
       .post(`${serverUrl}/channels`, data)
       .then((res) => res.data)
-      .then(({ result }) => {
-        chatRooms.push(result.id, result.channel_name);
-      });
+      .then(({ code, message, result }) => {
+        if (code !== 200) {
+          throw new Error(message);
+        }
+
+        const { id, channel_name } = result;
+
+        // 성공하면 채팅방에 추가
+        setChannels([...channels, { id, channel_name }]);
+
+        // 모달 닫기
+        closeModal();
+
+        // 새롭게 생성한 채팅방으로 이동
+        navigation(`/channels/${id}`);
+      })
+      .catch((err) => console.error(err));
 
     e.preventDefault();
   };
