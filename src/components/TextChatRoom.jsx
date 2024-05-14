@@ -21,7 +21,7 @@ export default function TextChatRoom() {
         <div className="text-room">
           <header className="text-room-header">
             <ChatBubbleIcon />
-            <h3 className="title">{selectedChatRoom?.channelName}</h3>
+            <h3 className="title">{selectedChatRoom?.channel_name}</h3>
           </header>
           <hr className="hr-light" />
           <div className="message-list">
