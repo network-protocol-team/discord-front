@@ -1,12 +1,47 @@
 import { useNavigate } from 'react-router-dom';
 import '../styles/JoinPage.scss';
 import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
+import { useRef, useState } from 'react';
+import axios from 'axios';
 
 export default function JoinPage() {
+  const inputRef = useRef();
+  const [errorMessage, setErrorMessage] = useState('');
+
   const navigation = useNavigate();
-  const login = () => {
+  const login = (e) => {
     // TODO: 서버로 로그인 요청 보내고 응답 대기
-    navigation('/channels');
+    const nickName = inputRef.current.value;
+    const serverUrl = import.meta.env.VITE_SERVER_URL;
+
+    const data = { nickName };
+
+    // 로그인
+    axios
+      .post(`${serverUrl}/users`, data)
+      .then((res) => res.data)
+      .then(({ code, message }) => {
+        if (code === '200' || code === 200) {
+          console.log('로그인 성공!');
+
+          // 성공하면 메인 페이지로 이동
+          navigation('/channels');
+        } else {
+          // 서버에서 받은 에러 메세지로 예외를 발생한다.
+          throw new Error(message);
+        }
+      })
+      .catch((err) => {
+        // 실패 시 에러 메세지 설정
+        setErrorMessage(err.message);
+      });
+
+    e.preventDefault();
+  };
+
+  // 재렌더링 방지를 위해 input을 ref로 설정
+  const handleInputChange = (e) => {
+    inputRef.current.value = e.target.value;
   };
 
   return (
@@ -20,10 +55,21 @@ export default function JoinPage() {
           </header>
           <form onSubmit={login}>
             <p className="desc">닉네임</p>
-            <input className="full" autoFocus />
+            <input
+              className="full"
+              autoFocus
+              ref={inputRef}
+              onChange={handleInputChange}
+              defaultValue=""
+            />
             <button type="submit" className="submit">
               로그인
             </button>
+            {errorMessage !== '' ? (
+              <p className="error-text">{errorMessage}</p>
+            ) : (
+              <></>
+            )}
           </form>
         </div>
       </main>
