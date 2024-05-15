@@ -11,8 +11,11 @@ import { useChatStore } from '../data/store';
 
 export default function ChatList() {
   const navigation = useNavigate();
+  const clearChatStorage = useChatStore.persist.clearStorage; // 세션 스토리지 삭제 함수
+
   const channels = useChatStore((state) => state.channels);
   const setChannels = useChatStore((state) => state.setChannels);
+  const nickName = useChatStore((state) => state.nickName);
 
   const resetStore = useChatStore((state) => state.reset);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -56,8 +59,10 @@ export default function ChatList() {
 
   const logout = () => {
     // TODO: 쿠키 및 클라이언트 상태 삭제
-    navigation('/users');
     resetStore();
+    clearChatStorage();
+
+    navigation('/users');
   };
 
   const handleInputChange = (e) => {
@@ -102,7 +107,7 @@ export default function ChatList() {
         </ul>
         <footer>
           <img src={ProfileImage} alt="프로필 사진" />
-          <p>익명의 카멜레온</p>
+          <p>{nickName}</p>
           <LogoutIcon onClick={logout} />
         </footer>
       </div>
