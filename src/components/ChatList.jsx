@@ -117,6 +117,37 @@ const ChatListItem = ({ channelName, channelId }) => {
     navigate(`/channels/${id}`);
   };
 
+  const deleteChannel = (id) => {
+    const serverUrl = import.meta.env.VITE_SERVER_URL;
+    const isDelete = confirm(
+      `정말로 채널 '${channelName}'을 삭제하시겠습니까?`,
+    );
+
+    if (!isDelete) return;
+
+    // 채널 삭제 수행
+    axios
+      .delete(`${serverUrl}/channels/${id}`)
+      .then((res) => res.data)
+      .then(({ code, message }) => {
+        if (code !== 200) {
+          throw new Error(message);
+        }
+
+        // TODO: 소켓 연결 끊기
+
+        // 지금 들어온 채팅방을 삭제하면 메인 페이지로 이동
+        if (id === selectedId) {
+          navigate('/channels');
+        }
+        // 그러지 않으면 유지
+        else {
+          navigate(`/channels/${selectedId}`);
+        }
+      })
+      .catch((err) => console.error(err));
+  };
+
   return (
     <li
       onClick={() => selectItem(channelId)}
@@ -124,7 +155,7 @@ const ChatListItem = ({ channelName, channelId }) => {
     >
       <TagIcon />
       <p>{channelName}</p>
-      <DeleteIcon className="delete" />
+      <DeleteIcon className="delete" onClick={() => deleteChannel(channelId)} />
     </li>
   );
 };

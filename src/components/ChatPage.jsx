@@ -43,7 +43,7 @@ export default function ChatPage() {
         setChannels(channels);
       })
       .catch((err) => console.error(err));
-  }, [setChannels]);
+  }, [setChannels, channelId]);
 
   return (
     <main className="chat-wrapper">
