@@ -2,8 +2,8 @@ import { useNavigate } from 'react-router-dom';
 import '../styles/JoinPage.scss';
 import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
 import { useRef, useState } from 'react';
-import axios from 'axios';
 import { useChatStore } from '../data/store';
+import { axiosApi } from '../utils/axios';
 
 export default function JoinPage() {
   const inputRef = useRef();
@@ -16,13 +16,12 @@ export default function JoinPage() {
   const login = (e) => {
     // TODO: 서버로 로그인 요청 보내고 응답 대기
     const nickName = inputRef.current.value;
-    const serverUrl = import.meta.env.VITE_SERVER_URL;
 
     const data = { nickName };
 
     // 로그인
-    axios
-      .post(`${serverUrl}/users`, data)
+    axiosApi
+      .post(`/users`, data)
       .then((res) => res.data)
       .then(({ code, message, result }) => {
         if (code === '200' || code === 200) {

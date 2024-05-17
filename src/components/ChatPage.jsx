@@ -5,7 +5,7 @@ import ChatList from './ChatList';
 import ChatRoom from './ChatRoom';
 import { useEffect } from 'react';
 import { useChatStore } from '../data/store';
-import axios from 'axios';
+import { axiosApi } from '../utils/axios';
 
 export default function ChatPage() {
   const { channelId } = useParams();
@@ -27,11 +27,9 @@ export default function ChatPage() {
 
   // 채팅방 정보 받아오기
   useEffect(() => {
-    const serverUrl = import.meta.env.VITE_SERVER_URL;
-
     // GET 요청
-    axios
-      .get(`${serverUrl}/channels`)
+    axiosApi
+      .get(`/channels`)
       .then((res) => res.data)
       .then(({ code, message, result }) => {
         if (code !== 200) {

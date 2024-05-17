@@ -4,10 +4,10 @@ import ProfileImage from '../assets/sample.png';
 import MapsUgcIcon from '@mui/icons-material/MapsUgc';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useRef, useState } from 'react';
-import axios from 'axios';
 import { Modal } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useChatStore } from '../data/store';
+import { axiosApi } from '../utils/axios';
 
 export default function ChatList() {
   const navigation = useNavigate();
@@ -30,11 +30,10 @@ export default function ChatList() {
 
   const createRoom = (e) => {
     const channel_name = inputRef.current.value;
-    const serverUrl = import.meta.env.VITE_SERVER_URL;
     const data = { channel_name };
 
-    axios
-      .post(`${serverUrl}/channels`, data)
+    axiosApi
+      .post(`/channels`, data)
       .then((res) => res.data)
       .then(({ code, message, result }) => {
         if (code !== 200) {
@@ -59,6 +58,10 @@ export default function ChatList() {
 
   const logout = () => {
     // TODO: 쿠키 및 클라이언트 상태 삭제
+    const isLogout = confirm('정말로 로그아웃 하시겠습니까?');
+
+    if (!isLogout) return;
+
     resetStore();
     clearChatStorage();
 
@@ -123,7 +126,6 @@ const ChatListItem = ({ channelName, channelId }) => {
   };
 
   const deleteChannel = (id) => {
-    const serverUrl = import.meta.env.VITE_SERVER_URL;
     const isDelete = confirm(
       `정말로 채널 '${channelName}'을 삭제하시겠습니까?`,
     );
@@ -131,8 +133,8 @@ const ChatListItem = ({ channelName, channelId }) => {
     if (!isDelete) return;
 
     // 채널 삭제 수행
-    axios
-      .delete(`${serverUrl}/channels/${id}`)
+    axiosApi
+      .delete(`/channels/${id}`)
       .then((res) => res.data)
       .then(({ code, message }) => {
         if (code !== 200) {
