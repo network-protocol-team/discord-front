@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom';
 import ChatList from './ChatList';
 import ChatRoom from './ChatRoom';
 import { useEffect } from 'react';
-import { useChatStore } from '../data/store';
+import { useChatStore, useTempStore } from '../data/store';
 import { axiosApi } from '../utils/axios';
 
 export default function ChatPage() {
@@ -15,6 +15,9 @@ export default function ChatPage() {
   const setSelectedChatRoom = useChatStore(
     (state) => state.setSelectedChatRoom,
   );
+
+  const fetchTriggered = useTempStore((state) => state.triggered);
+
   // 이 부분에 추가
   useEffect(() => {
     if (channelId === undefined) return;
@@ -41,7 +44,7 @@ export default function ChatPage() {
         setChannels(channels);
       })
       .catch((err) => console.error(err));
-  }, [setChannels, channelId]);
+  }, [setChannels, channelId, fetchTriggered]);
 
   return (
     <main className="chat-wrapper">

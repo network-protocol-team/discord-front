@@ -6,7 +6,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useRef, useState } from 'react';
 import { Modal } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { useChatStore } from '../data/store';
+import { useChatStore, useTempStore } from '../data/store';
 import { axiosApi } from '../utils/axios';
 
 export default function ChatList() {
@@ -20,6 +20,7 @@ export default function ChatList() {
   const resetStore = useChatStore((state) => state.reset);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const inputRef = useRef();
+
   const openModal = () => {
     setIsModalOpen(true);
   };
@@ -125,7 +126,11 @@ const ChatListItem = ({ channelName, channelId }) => {
     navigate(`/channels/${id}`);
   };
 
-  const deleteChannel = (id) => {
+  const triggerFetch = useTempStore((state) => state.trigger);
+
+  const deleteChannel = (e, id) => {
+    e.stopPropagation();
+
     const isDelete = confirm(
       `정말로 채널 '${channelName}'을 삭제하시겠습니까?`,
     );
@@ -151,6 +156,9 @@ const ChatListItem = ({ channelName, channelId }) => {
         else {
           navigate(`/channels/${selectedId}`);
         }
+
+        // 다시 채널 불러오도록 하기
+        triggerFetch();
       })
       .catch((err) => console.error(err));
   };
@@ -162,7 +170,10 @@ const ChatListItem = ({ channelName, channelId }) => {
     >
       <TagIcon />
       <p>{channelName}</p>
-      <DeleteIcon className="delete" onClick={() => deleteChannel(channelId)} />
+      <DeleteIcon
+        className="delete"
+        onClick={(e) => deleteChannel(e, channelId)}
+      />
     </li>
   );
 };

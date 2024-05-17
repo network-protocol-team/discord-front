@@ -8,7 +8,7 @@ const chatStoreInit = {
   userId: 0, // 유저 id
   chats: [], // 한 채널의 채팅들
   channels: [], // 채널 정보들
-  selectedId: '0', // 선택된 채널의 id
+  selectedId: '', // 선택된 채널의 id
   selectedChatRoom: undefined, // 선택된 채널의 정보
 };
 
@@ -39,3 +39,8 @@ export const useChatStore = create(
     },
   ),
 );
+
+export const useTempStore = create((set) => ({
+  triggered: true,
+  trigger: () => set((state) => ({ triggered: !state.triggered })),
+}));
