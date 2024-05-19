@@ -12,6 +12,7 @@ import { axiosApi } from '../utils/axios';
 export default function ChatList() {
   const navigation = useNavigate();
   const clearChatStorage = useChatStore.persist.clearStorage; // 세션 스토리지 삭제 함수
+  const [errorMessage, setErrorMessage] = useState('');
 
   const channels = useChatStore((state) => state.channels);
   const setChannels = useChatStore((state) => state.setChannels);
@@ -52,7 +53,10 @@ export default function ChatList() {
         // 새롭게 생성한 채팅방으로 이동
         navigation(`/channels/${id}`);
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        // 채널 이름 중복시 에러 메시지 설정
+        setErrorMessage(err.message);
+      });
 
     e.preventDefault();
   };
@@ -91,6 +95,11 @@ export default function ChatList() {
               defaultValue=""
             />
             <button className="submit">채널 생성</button>
+            {errorMessage !== '' ? (
+              <p className="error-text">{errorMessage}</p>
+            ) : (
+              <></>
+            )}
           </form>
         </div>
       </Modal>
