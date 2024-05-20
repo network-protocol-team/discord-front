@@ -44,13 +44,3 @@ export const useTempStore = create((set) => ({
   triggered: true,
   trigger: () => set((state) => ({ triggered: !state.triggered })),
 }));
-
-export const useSocketStore = create((set) => ({
-  chatSocket: null,
-  videoSocket: null,
-  manageSocket: null, // 채팅방 관리용
-
-  setChatSocket: (chatSocket) => set(() => ({ chatSocket })),
-  setVideoSocket: (videoSocket) => set(() => ({ videoSocket })),
-  setManageSocket: (manageSocket) => set(() => ({ manageSocket })),
-}));
