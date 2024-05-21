@@ -8,8 +8,12 @@ import { useEffect, useRef, useState } from 'react';
 import { sendToServer } from '../utils/socket';
 import { logClient, sleep } from '../utils/common';
 import { Exception } from 'sass';
+import { useNavigate } from 'react-router-dom';
 
 export default function VideoChatRoom() {
+  const navigation = useNavigate();
+  const setSelectedId = useChatStore((state) => state.setSelectedId);
+
   // 소켓은 ref 로 관리
   const videoSocket = useRef(null);
   const localVideoRef = useRef(null);
@@ -21,6 +25,8 @@ export default function VideoChatRoom() {
 
   // const [otherUsers, setOtherUsers] = useState({});
   const [remoteStreams, setRemoteStreams] = useState({});
+  const [isCameraOn, setIsCameraOn] = useState(true);
+  const [isMicOn, setIsMicOn] = useState(true);
 
   const otherUsers = useRef({});
 
@@ -316,14 +322,6 @@ export default function VideoChatRoom() {
   };
 
   const endCall = () => {
-    // 연결한 rtc peer 들 해제
-    Object.values(otherUsers.current).forEach((peerConnection) =>
-      peerConnection.close(),
-    );
-    otherUsers.current = {};
-    // setOtherUsers({});
-    setRemoteStreams({});
-
     // 카메라, 마이크 off
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -332,6 +330,14 @@ export default function VideoChatRoom() {
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = null;
     }
+
+    // 연결한 rtc peer 들 해제
+    Object.values(otherUsers.current).forEach((peerConnection) =>
+      peerConnection.close(),
+    );
+    otherUsers.current = {};
+    // setOtherUsers({});
+    setRemoteStreams({});
 
     // 소켓 닫기
     videoSocket.current.deactivate();
@@ -353,10 +359,31 @@ export default function VideoChatRoom() {
     };
   }, [selectedId]);
 
+  const toggleCamera = () => {
+    const videoTrack = localStreamRef.current
+      ?.getVideoTracks()
+      .find((track) => track.kind === 'video');
+    if (videoTrack) {
+      videoTrack.enabled = !videoTrack.enabled;
+      setIsCameraOn(videoTrack.enabled);
+    }
+  };
+
+  const toggleMic = () => {
+    const audioTrack = localStreamRef.current
+      ?.getAudioTracks()
+      .find((track) => track.kind === 'audio');
+    if (audioTrack) {
+      audioTrack.enabled = !audioTrack.enabled;
+      setIsMicOn(audioTrack.enabled);
+    }
+  };
+
   return (
     <div className="video-chat-wrapper">
       <div className="video-grid">
         <video
+          className="video-p2p"
           ref={localVideoRef}
           autoPlay
           playsInline
@@ -369,6 +396,7 @@ export default function VideoChatRoom() {
             ref={(video) => {
               if (video) video.srcObject = stream;
             }}
+            className="video-p2p"
             autoPlay
             playsInline
             style={{ width: '300px', marginRight: '20px' }}
@@ -376,13 +404,21 @@ export default function VideoChatRoom() {
         ))}
       </div>
       <div className="video-buttons">
-        <button className="camera">
-          <CameraAltIcon />
+        <button className="camera" onClick={toggleCamera}>
+          <CameraAltIcon color={isCameraOn ? 'primary' : 'disabled'} />
         </button>
-        <button className="mic">
-          <MicIcon />
+        <button className="mic" onClick={toggleMic}>
+          <MicIcon color={isMicOn ? 'primary' : 'disabled'} />
         </button>
-        <button className="end">
+        <button
+          className="end"
+          onClick={() => {
+            endCall();
+            navigation('/channels');
+            // 다시 채널 불러오도록 하기
+            setSelectedId('');
+          }}
+        >
           <CallEndIcon />
         </button>
       </div>

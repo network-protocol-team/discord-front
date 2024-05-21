@@ -25,6 +25,12 @@
   background-color: $highlight-primary;
 }
 
+.video-p2p {
+  transform: scaleX(-1);
+  width: '300px';
+  margin-right: '20px';
+}
+
 .video-buttons {
   margin: 0 auto;
   display: flex;
