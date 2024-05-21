@@ -25,6 +25,7 @@
     "sockjs": "^0.3.24",
     "sockjs-client": "^1.6.1",
     "styled-components": "^6.1.11",
+    "ws": "^8.17.0",
     "zustand": "^4.5.2"
   },
   "devDependencies": {
