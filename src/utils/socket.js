@@ -5,9 +5,9 @@
  * ex) const sendToVideoServer = sendToServer(videoSocket);
  */
 export const sendToServer =
-  (socket) =>
+  (socketRef) =>
   (destination, body, headers = {}) => {
-    socket.publish({
+    socketRef.current.publish({
       destination,
       body: JSON.stringify(body),
       headers,
