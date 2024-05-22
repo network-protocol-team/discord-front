@@ -5,23 +5,72 @@ import SendIcon from "@mui/icons-material/Send";
 import ChatBubbleIcon from "@mui/icons-material/ChatBubble";
 import { useChatStore } from "../data/store";
 import { axiosApi } from "../utils/axios";
+import * as StompJs from "@stomp/stompjs";
+import SockJS from 'sockjs-client';
+
 
 export default function TextChatRoom() {
   const selectedChatRoom = useChatStore((state) => state.selectedChatRoom);
+  const selectedId = useChatStore((state) => state.selectedId);
+  const selectedNickname = useChatStore((state) => state.selectedNickname);
+  const chatSocket = useRef(null);
   const textareaRef = useRef();
-  const [errorMessage, setErrorMessage] = useState("");
-  const [chatArray, setChatArray] = useState([]); // chatArray 상태 추가
-  const [refresh, setRefresh] = useState(false); // 리렌더링을 위한 상태
+  const [chatArray, setChatArray] = useState([]);
+  const [refresh, setRefresh] = useState(false);
+
+  const [chat, setChat] = useState("");
+
+  const publish = (chat) => {
+    if (!chatSocket.current.connected) return;
+
+    chatSocket.current.publish({
+      destination: "/pub/channels/${selectedId}/text",
+      body: JSON.stringify({
+        nickName: selectedNickname,
+        content: chat,
+      }),
+    });
+
+    setChat("");
+  };
+
+  const connect= () => {
+    const socket = new SockJS(import.meta.env.VITE_SOCK_URL);
+    chatSocket.current = new StompJs.Client({
+      webSocketFactory: () => socket,
+      onConnect: () => {
+        console.log("Connected to chat webSocket");
+
+        chatSocket.current.subscribe(`/sub/channels/${selectedId}/text`, chatUpdate);
+      },
+    });
+    chatSocket.current.activate();
+  };
+
+  const disconnect = () => {
+    chatSocket.current.deactivate();
+  };
+
+  const chatUpdate = (message) => {
+      const json_body = JSON.parse(message.body).result;
+      setChatArray((_chat_list) => [..._chat_list, json_body]);
+  };
+
+  const handleChange = (event) => {
+    setChat(event.target.value);
+  };
+
+  const handleSubmit = (event, chat) => {
+    event.preventDefault();
+    publish(chat);
+  };
 
   const loadChats = (e) => {
-    const channel_id = "abjifjijxkjl"; // 테스트용, 추후 변경 필요
-    const data = { channel_id };
-
-    // chatArray 비우기
+    const data = { selectedId };
     setChatArray([]);
 
     axiosApi
-      .get(`/channels/${channel_id}`, data)
+      .get(`/channels/${selectedId}`, data)
       .then((res) => res.data)
       .then(({ code, message, result }) => {
         if (code !== 200) {
@@ -34,29 +83,33 @@ export default function TextChatRoom() {
           msg.content,
         ]);
 
-        setChatArray(newChats); // 새로운 메시지 추가
+        setChatArray(newChats);
 
-        console.log(chatArray); // 디버깅용, 추후 삭제
-      })
-      .catch((err) => {
-        setErrorMessage(err.message);
+        console.log(chatArray);
       });
 
     if (e) e.preventDefault();
   };
 
   const handleResizeHeight = () => {
-    textareaRef.current.style.height = "auto"; // height 초기화
+    textareaRef.current.style.height = "auto";
     textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
   };
 
   const handleRefresh = () => {
-    setRefresh((prev) => !prev); // 상태를 토글하여 컴포넌트를 리렌더링
+    setRefresh((prev) => !prev);
+  };
+
+  const handleChangeAndResize = (event) => {
+    handleChange(event);
+    handleResizeHeight();
   };
 
   useEffect(() => {
-    loadChats(); // 페이지 로드 시 loadChats 함수 실행
-  }, []); // 빈 의존성 배열을 사용하여 한 번만 실행
+    loadChats();
+    connect();
+    return () => disconnect();
+  }, [selectedId]);
 
   return (
     <>
@@ -68,7 +121,7 @@ export default function TextChatRoom() {
           </header>
           <hr className="hr-light" />
           <div className="message-list">
-            <Message chatArray={chatArray} key={refresh} /> {/* chatArray를 프롭으로 전달 */}
+            <Message chatArray={chatArray} key={refresh} />
           </div>
           <div className="message-input">
             <textarea
@@ -76,10 +129,10 @@ export default function TextChatRoom() {
               aria-label="Message"
               ref={textareaRef}
               rows={1}
-              onChange={handleResizeHeight}
+              onChange={handleChangeAndResize}
+              value={chat}
             />
-            <SendIcon onClick={loadChats} />
-            <button onClick={handleRefresh}>hello</button>
+            <SendIcon onClick={(event) => handleSubmit(event, chat)} />
           </div>
         </div>
       </div>
