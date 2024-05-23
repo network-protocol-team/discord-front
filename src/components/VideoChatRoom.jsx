@@ -53,11 +53,12 @@ export default function VideoChatRoom() {
   };
 
   const connectVideoSocket = () => {
-    const socket = new SockJS(import.meta.env.VITE_SOCK_URL);
+    // const socket = new SockJS(import.meta.env.VITE_SOCK_URL);
     const camKey = nickName;
 
     videoSocket.current = new Client({
-      webSocketFactory: () => socket,
+      // webSocketFactory: () => socket,
+      brokerURL: `ws://192.168.35.233:8080/ws`,
       debug: () => {},
       reconnectDelay: 5000, // 자동 재 연결
       heartbeatIncoming: 4000,

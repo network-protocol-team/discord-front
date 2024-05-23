@@ -22,7 +22,9 @@ export default function ChatPage() {
   useEffect(() => {
     if (channelId === undefined) return;
 
-    const currRoom = channels.find(({ id }) => id === channelId);
+    const currRoom = channels.find(
+      ({ channelId: id }) => `${id}` === channelId,
+    );
 
     setSelectedId(channelId);
     setSelectedChatRoom(currRoom);

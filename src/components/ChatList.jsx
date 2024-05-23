@@ -104,7 +104,7 @@ export default function ChatList() {
         <hr className="hr-light" />
         <ul>
           {channels &&
-            channels.map(({ channelName, id: channelId }) => (
+            channels.map(({ channelName, channelId }) => (
               <ChatListItem
                 channelName={channelName}
                 channelId={channelId}
