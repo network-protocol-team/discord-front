@@ -4,8 +4,8 @@ import { useParams } from 'react-router-dom';
 import ChatList from './ChatList';
 import ChatRoom from './ChatRoom';
 import { useEffect } from 'react';
-import { useChatStore } from '../data/store';
-import axios from 'axios';
+import { useChatStore, useTempStore } from '../data/store';
+import { axiosApi } from '../utils/axios';
 
 export default function ChatPage() {
   const { channelId } = useParams();
@@ -15,11 +15,16 @@ export default function ChatPage() {
   const setSelectedChatRoom = useChatStore(
     (state) => state.setSelectedChatRoom,
   );
+
+  const fetchTriggered = useTempStore((state) => state.triggered);
+
   // 이 부분에 추가
   useEffect(() => {
     if (channelId === undefined) return;
 
-    const currRoom = channels.find(({ id }) => id === channelId);
+    const currRoom = channels.find(
+      ({ channelId: id }) => `${id}` === channelId,
+    );
 
     setSelectedId(channelId);
     setSelectedChatRoom(currRoom);
@@ -27,11 +32,9 @@ export default function ChatPage() {
 
   // 채팅방 정보 받아오기
   useEffect(() => {
-    const serverUrl = import.meta.env.VITE_SERVER_URL;
-
     // GET 요청
-    axios
-      .get(`${serverUrl}/channels`)
+    axiosApi
+      .get(`/channels`)
       .then((res) => res.data)
       .then(({ code, message, result }) => {
         if (code !== 200) {
@@ -43,7 +46,7 @@ export default function ChatPage() {
         setChannels(channels);
       })
       .catch((err) => console.error(err));
-  }, [setChannels]);
+  }, [setChannels, channelId, fetchTriggered]);
 
   return (
     <main className="chat-wrapper">

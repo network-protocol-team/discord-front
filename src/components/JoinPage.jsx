@@ -2,27 +2,34 @@ import { useNavigate } from 'react-router-dom';
 import '../styles/JoinPage.scss';
 import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
 import { useRef, useState } from 'react';
-import axios from 'axios';
+import { useChatStore } from '../data/store';
+import { axiosApi } from '../utils/axios';
 
 export default function JoinPage() {
   const inputRef = useRef();
   const [errorMessage, setErrorMessage] = useState('');
 
+  const setNickName = useChatStore((state) => state.setNickName);
+  const setUserId = useChatStore((state) => state.setUserId);
+
   const navigation = useNavigate();
   const login = (e) => {
     // TODO: 서버로 로그인 요청 보내고 응답 대기
     const nickName = inputRef.current.value;
-    const serverUrl = import.meta.env.VITE_SERVER_URL;
 
     const data = { nickName };
 
     // 로그인
-    axios
-      .post(`${serverUrl}/users`, data)
+    axiosApi
+      .post(`/users`, data)
       .then((res) => res.data)
-      .then(({ code, message }) => {
+      .then(({ code, message, result }) => {
         if (code === '200' || code === 200) {
           console.log('로그인 성공!');
+
+          // 서버 측에서 검증된 닉네임으로 고정
+          setNickName(result.nickName);
+          setUserId(result.userId);
 
           // 성공하면 메인 페이지로 이동
           navigation('/channels');
