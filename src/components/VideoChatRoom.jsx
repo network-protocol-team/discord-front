@@ -212,6 +212,8 @@ export default function VideoChatRoom() {
 
     const { userKeys } = data;
 
+    console.log('userkeys: ', userKeys);
+
     // 서버로부터 들어온 참여자 set
     const userKeySet = new Set(userKeys);
 
@@ -326,17 +328,15 @@ export default function VideoChatRoom() {
     };
 
     peerConnection.ontrack = (event) => {
+      console.log('track events!', event);
       setRemoteStreams((prevStreams) => ({
         ...prevStreams,
         [targetId]: event.streams[0],
       }));
     };
 
-    if (!localStreamRef.current) {
-      await startLocalStream();
-    }
-
     localStreamRef.current?.getTracks().forEach((track) => {
+      console.log('addtrack: ', localStreamRef.current);
       peerConnection.addTrack(track, localStreamRef.current);
     });
 
@@ -393,6 +393,7 @@ export default function VideoChatRoom() {
     }
 
     startLocalStream(); // 카메라, 마이크 on
+
     connectVideoSocket(); // 소켓 연결
 
     // component unmount 시 소켓 정리
@@ -401,15 +402,19 @@ export default function VideoChatRoom() {
     };
   }, [selectedId]);
 
-  const doSend = async () => {};
-
   // local stream 세팅 시
   useEffect(() => {
     if (isLocalStreamLoaded) {
       // 먼저 채널에 접속했음을 알린다.
+      console.log('initial ref: ', localStreamRef.current);
       joinUser();
     }
   }, [isLocalStreamLoaded]);
+
+  const debug = () => {
+    console.log(localStreamRef.current);
+    console.log(remoteStreams);
+  };
 
   return (
     <div className="video-chat-wrapper">
@@ -445,9 +450,6 @@ export default function VideoChatRoom() {
         <button
           className="end"
           onClick={() => {
-            // 다른 사용자들에게 나간 것 알리기
-            outUser();
-
             endCall();
             navigation('/channels');
             // 다시 채널 불러오도록 하기
@@ -456,6 +458,7 @@ export default function VideoChatRoom() {
         >
           <CallEndIcon />
         </button>
+        <button onClick={debug}>debug</button>
       </div>
     </div>
   );
