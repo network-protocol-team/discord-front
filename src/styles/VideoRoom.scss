@@ -44,6 +44,11 @@
     background-color: $background-dark;
     color: $text-primary;
 
+    &.active {
+      background-color: $text-primary;
+      color: $background-dark;
+    }
+
     &.end {
       background-color: $red;
     }

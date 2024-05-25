@@ -1,14 +1,17 @@
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
+import VideocamIcon from '@mui/icons-material/Videocam';
+import VideocamOffIcon from '@mui/icons-material/VideocamOff';
 import MicIcon from '@mui/icons-material/Mic';
+import MicOffIcon from '@mui/icons-material/MicOff';
 import CallEndIcon from '@mui/icons-material/CallEnd';
 import { useChatStore } from '../data/store';
+import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { useEffect, useRef, useState } from 'react';
 import { sendToServer } from '../utils/socket';
-import { logClient, sleep } from '../utils/common';
+import { sleep } from '../utils/common';
 import { Exception } from 'sass';
 import { useNavigate } from 'react-router-dom';
-import SockJS from 'sockjs-client';
 
 export default function VideoChatRoom() {
   const navigation = useNavigate();
@@ -23,13 +26,15 @@ export default function VideoChatRoom() {
   const nickName = useChatStore((state) => state.nickName);
   const userKey = nickName;
 
-  const [isLocalStreamLoaded, setIsLocalStreamLoaded] = useState(false);
+  // const [otherUsers, setOtherUsers] = useState({});
   const [remoteStreams, setRemoteStreams] = useState({});
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
-  const isNew = useRef(true); // 새로 들어온 유저인지
+  const [isLocalStreamLoaded, setIsLocalStreamLoaded] = useState(false);
+  const [outUsers, setOutUsers] = useState([]);
 
   const otherUsers = useRef({});
+  const isNew = useRef(true);
 
   // videoSocket 용 signaling 서버로 보내는 함수
   const sendToVideoServer = sendToServer(videoSocket);
@@ -56,9 +61,11 @@ export default function VideoChatRoom() {
   };
 
   const connectVideoSocket = () => {
+    // const socket = new SockJS(import.meta.env.VITE_SOCK_URL);
     const camKey = nickName;
 
     videoSocket.current = new Client({
+      // webSocketFactory: () => socket,
       brokerURL: import.meta.env.VITE_SOCK_URL,
       debug: () => {},
       reconnectDelay: 5000, // 자동 재 연결
@@ -66,8 +73,7 @@ export default function VideoChatRoom() {
       heartbeatOutgoing: 4000,
 
       onConnect: () => {
-        logClient('Connected to video webSocket');
-
+        console.log('Connected to video webSocket');
         // subscribe api 작성
 
         videoSocket.current.subscribe(
@@ -99,46 +105,20 @@ export default function VideoChatRoom() {
 
   const parseMessage = (message) => JSON.parse(message.body);
 
-  // 나간 유저 확인
-  const removeOutUsers = (userKeys) => {
-    const tempOtherUsers = { ...otherUsers.current };
-    const tempRemoteStreams = { ...remoteStreams };
+  // 나간 유저 찾기
+  const findOutUsers = (userKeys) => {
+    const users = [];
 
     for (const key of Object.keys(otherUsers.current)) {
-      if (userKeys.has(key)) continue;
-
-      delete tempOtherUsers[key];
-      if (remoteStreams[key] !== undefined) {
-        // remoteStreams 에서도 삭제
-        delete tempRemoteStreams[key];
-      }
+      if (!userKeys.has(key)) users.push(key);
     }
 
-    // 수정된 값으로 덮어쓰기
-    otherUsers.current = { ...tempOtherUsers };
-    setRemoteStreams(tempRemoteStreams);
-  };
-
-  // 들어온 유저 확인
-  const addExistingUsers = (userKeys, myKey) => {
-    const tempOtherUsers = { ...otherUsers.current };
-    for (const key of userKeys) {
-      // 자기 자신은 추가하지 않음
-      if (key === myKey) continue;
-
-      // key가 원본에 없을때만 빈 object 추가
-      tempOtherUsers[key] ??= {};
-    }
-
-    // 수정된 값으로 덮어쓰기
-    otherUsers.current = { ...tempOtherUsers };
+    return users;
   };
 
   // subscriber 함수 정의
 
   const onOffer = async (message) => {
-    logClient('on offer');
-
     const data = parseMessage(message);
     const { sender, offer } = data;
 
@@ -146,7 +126,7 @@ export default function VideoChatRoom() {
     if (sender === nickName) return;
 
     // 보낸 사람(신규 유저)의 이름으로 rtc peer 만듦
-    const peerConnection = await createPeerConnection(sender);
+    const peerConnection = createPeerConnection(sender);
 
     // 기존에 설정한 peer 을 덮어쓰기
     otherUsers.current = {
@@ -166,8 +146,6 @@ export default function VideoChatRoom() {
   };
 
   const onAnswer = async (message) => {
-    logClient('on answer');
-
     const data = parseMessage(message);
     const { sender, answer } = data;
 
@@ -188,45 +166,37 @@ export default function VideoChatRoom() {
   };
 
   const onCandidate = async (message) => {
-    logClient('on candidate');
-
     const data = parseMessage(message);
     const { sender, iceCandidate } = data;
 
     // rtc peer를 바로 가져옴
     const peerConnection = otherUsers.current[sender];
 
-    if (!peerConnection) {
-      throw new Error('없는 사용자로부터 온 ice-candidate 요청입니다.');
-    }
+    if (peerConnection === undefined) return;
 
     // iceCandidate 를 등록해줌
     await peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidate));
   };
 
   const onOthers = async (message) => {
-    logClient('on others');
-
     // 다른 사람들의 정보를 받음
     const data = parseMessage(message);
-
     const { userKeys } = data;
 
-    console.log('userkeys: ', userKeys);
-
-    // 서버로부터 들어온 참여자 set
     const userKeySet = new Set(userKeys);
 
-    // 먼저 나간사람 처리
-    removeOutUsers(userKeySet);
-    // 기존, 신규 유저 처리
-    addExistingUsers(userKeySet, nickName);
+    // 나간 유저 제거
+    setOutUsers(findOutUsers(userKeySet));
 
+    // 새로 들어온 사람만 offer 보내기
     if (isNew.current) {
-      // 기존 유저들에게 offer 보냄
+      // local stream 갱신을 위한 io-bound job 수행
+      await sleep(1000);
+
       await Promise.all(
-        Object.keys(otherUsers.current).map(async (otherKey) => {
-          sendOffer(otherKey);
+        userKeys.map(async (receiver) => {
+          if (receiver === nickName) return;
+          return await sendOffer(receiver);
         }),
       );
 
@@ -238,17 +208,8 @@ export default function VideoChatRoom() {
 
   // 현재 유저(신규 가입자; nickName)가 다른 유저(receiver)에게 offer 보냄
   const sendOffer = async (receiver) => {
-    logClient('send offer');
-
-    // 자기 자신의 이름을 받으면 무시
-    if (receiver === nickName) return;
-
-    if (otherUsers.current[receiver] === undefined) {
-      throw new Error('없는 사용자에게 offer 를 보내려고 합니다.');
-    }
-
     // 상대방을 나타내는 RTC peer 생성
-    const peerConnection = await createPeerConnection(receiver);
+    const peerConnection = createPeerConnection(receiver);
 
     // 기존에 설정한 peer 을 덮어쓰기
     otherUsers.current = {
@@ -269,15 +230,6 @@ export default function VideoChatRoom() {
 
   // 기존 유저가 신규 유저에게 answer 보냄
   const sendAnswer = (receiver, answer) => {
-    logClient('send answer');
-
-    // 자기 자신의 이름을 받으면 무시
-    if (receiver === nickName) return;
-
-    if (otherUsers.current[receiver] === undefined) {
-      throw new Error('없는 사용자에게 answer 를 보내려고 합니다.');
-    }
-
     sendToVideoServer(`/pub/channels/${selectedId}/video/answer/${receiver}`, {
       sender: nickName,
       channelId: selectedId,
@@ -287,8 +239,6 @@ export default function VideoChatRoom() {
   };
 
   const joinUser = () => {
-    logClient('join');
-
     sendToVideoServer(`/pub/channels/${selectedId}/send-me`, {
       sender: nickName,
       channelId: selectedId,
@@ -296,9 +246,9 @@ export default function VideoChatRoom() {
       state: 'join',
     });
   };
-  const outUser = () => {
-    logClient('out');
 
+  const outUser = () => {
+    console.log('out user');
     sendToVideoServer(`/pub/channels/${selectedId}/send-me`, {
       sender: nickName,
       channelId: selectedId,
@@ -309,11 +259,10 @@ export default function VideoChatRoom() {
 
   // webRTC 관련 함수 정의
 
-  const createPeerConnection = async (targetId) => {
+  const createPeerConnection = (targetId) => {
     const peerConnection = new RTCPeerConnection(configuration);
 
     peerConnection.onicecandidate = (event) => {
-      logClient(`onicecandidate`);
       if (!event.candidate) return;
 
       sendToVideoServer(
@@ -328,7 +277,6 @@ export default function VideoChatRoom() {
     };
 
     peerConnection.ontrack = (event) => {
-      console.log('track events!', event);
       setRemoteStreams((prevStreams) => ({
         ...prevStreams,
         [targetId]: event.streams[0],
@@ -336,7 +284,6 @@ export default function VideoChatRoom() {
     };
 
     localStreamRef.current?.getTracks().forEach((track) => {
-      console.log('addtrack: ', localStreamRef.current);
       peerConnection.addTrack(track, localStreamRef.current);
     });
 
@@ -353,6 +300,12 @@ export default function VideoChatRoom() {
       localVideoRef.current.srcObject = null;
     }
 
+    try {
+      outUser();
+    } catch {
+      //
+    }
+
     // 연결한 rtc peer 들 해제
     Object.values(otherUsers.current).forEach((peerConnection) =>
       peerConnection.close(),
@@ -364,6 +317,41 @@ export default function VideoChatRoom() {
     // 소켓 닫기
     videoSocket.current.deactivate();
   };
+
+  // 소켓 activate 및 deactivate
+  useEffect(() => {
+    // 이미 소켓이 있으면 정리해준다
+    if (videoSocket.current) {
+      endCall();
+    }
+
+    startLocalStream(); // 카메라, 마이크 on
+    connectVideoSocket(); // 소켓 연결
+
+    // component unmount 시 소켓 정리
+    return () => {
+      endCall();
+    };
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (isLocalStreamLoaded) {
+      // 먼저 채널에 접속했음을 알린다.
+      joinUser();
+    }
+  }, [isLocalStreamLoaded]);
+
+  useEffect(() => {
+    const tempRemoteStreams = { ...remoteStreams };
+    const tempOtherUsers = { ...otherUsers.current };
+    outUsers.forEach((user) => {
+      delete tempRemoteStreams[user];
+      delete tempOtherUsers[user];
+    });
+
+    otherUsers.current = tempOtherUsers;
+    setRemoteStreams(tempRemoteStreams);
+  }, [outUsers]);
 
   const toggleCamera = () => {
     const videoTrack = localStreamRef.current
@@ -385,67 +373,58 @@ export default function VideoChatRoom() {
     }
   };
 
-  // 소켓 activate 및 deactivate
-  useEffect(() => {
-    // 이미 소켓이 있으면 정리해준다
-    if (videoSocket.current) {
-      endCall();
-    }
-
-    startLocalStream(); // 카메라, 마이크 on
-
-    connectVideoSocket(); // 소켓 연결
-
-    // component unmount 시 소켓 정리
-    return () => {
-      endCall();
-    };
-  }, [selectedId]);
-
-  // local stream 세팅 시
-  useEffect(() => {
-    if (isLocalStreamLoaded) {
-      // 먼저 채널에 접속했음을 알린다.
-      console.log('initial ref: ', localStreamRef.current);
-      joinUser();
-    }
-  }, [isLocalStreamLoaded]);
-
-  const debug = () => {
-    console.log(localStreamRef.current);
-    console.log(remoteStreams);
-  };
-
   return (
     <div className="video-chat-wrapper">
       <div className="video-grid">
-        <video
-          className="video-p2p"
-          ref={localVideoRef}
-          autoPlay
-          playsInline
-          muted
-          style={{ width: '300px', marginRight: '20px' }}
-        />
-        {Object.entries(remoteStreams).map(([peerId, stream]) => (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <span>나 ({nickName})</span>
           <video
-            key={peerId}
-            ref={(video) => {
-              if (video) video.srcObject = stream;
-            }}
             className="video-p2p"
+            ref={localVideoRef}
             autoPlay
             playsInline
+            muted
             style={{ width: '300px', marginRight: '20px' }}
           />
+        </div>
+        {Object.entries(remoteStreams).map(([peerId, stream]) => (
+          <div
+            key={peerId}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <span>{peerId}</span>
+            <video
+              ref={(video) => {
+                if (video) video.srcObject = stream;
+              }}
+              className="video-p2p"
+              autoPlay
+              playsInline
+              style={{ width: '300px', marginRight: '20px' }}
+            />
+          </div>
         ))}
       </div>
       <div className="video-buttons">
-        <button className="camera" onClick={toggleCamera}>
-          <CameraAltIcon color={isCameraOn ? 'primary' : 'disabled'} />
+        <button
+          className={`camera ${isCameraOn ? 'active' : ''}`}
+          onClick={toggleCamera}
+        >
+          {isCameraOn ? <VideocamIcon /> : <VideocamOffIcon />}
         </button>
-        <button className="mic" onClick={toggleMic}>
-          <MicIcon color={isMicOn ? 'primary' : 'disabled'} />
+        <button
+          className={`mic ${isMicOn ? 'active' : ''}`}
+          onClick={toggleMic}
+        >
+          {isMicOn ? <MicIcon /> : <MicOffIcon />}
         </button>
         <button
           className="end"
@@ -458,7 +437,6 @@ export default function VideoChatRoom() {
         >
           <CallEndIcon />
         </button>
-        <button onClick={debug}>debug</button>
       </div>
     </div>
   );
