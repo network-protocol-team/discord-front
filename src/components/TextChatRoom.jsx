@@ -6,6 +6,7 @@ import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
 import { useChatStore } from '../data/store';
 import { axiosApi } from '../utils/axios';
 import * as StompJs from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 
 export default function TextChatRoom() {
   const selectedChatRoom = useChatStore((state) => state.selectedChatRoom);
@@ -34,10 +35,11 @@ export default function TextChatRoom() {
 
   const connect = () => {
     // const socket = new SockJS(import.meta.env.VITE_SOCK_URL);
+
     chatSocket.current = new StompJs.Client({
       // webSocketFactory: () => socket,
-      brokerURL: `ws://192.168.35.233:8080/ws`,
-      debug: (str) => console.log(str),
+      brokerURL: import.meta.env.VITE_SOCK_URL,
+      // debug: (str) => console.log(str),
       onConnect: () => {
         console.log('Connected to chat webSocket');
 

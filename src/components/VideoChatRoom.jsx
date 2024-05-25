@@ -2,13 +2,13 @@ import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import MicIcon from '@mui/icons-material/Mic';
 import CallEndIcon from '@mui/icons-material/CallEnd';
 import { useChatStore } from '../data/store';
-import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { useEffect, useRef, useState } from 'react';
 import { sendToServer } from '../utils/socket';
 import { logClient, sleep } from '../utils/common';
 import { Exception } from 'sass';
 import { useNavigate } from 'react-router-dom';
+import SockJS from 'sockjs-client';
 
 export default function VideoChatRoom() {
   const navigation = useNavigate();
@@ -23,10 +23,11 @@ export default function VideoChatRoom() {
   const nickName = useChatStore((state) => state.nickName);
   const userKey = nickName;
 
-  // const [otherUsers, setOtherUsers] = useState({});
+  const [isLocalStreamLoaded, setIsLocalStreamLoaded] = useState(false);
   const [remoteStreams, setRemoteStreams] = useState({});
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
+  const isNew = useRef(true); // 새로 들어온 유저인지
 
   const otherUsers = useRef({});
 
@@ -47,18 +48,18 @@ export default function VideoChatRoom() {
         audio: true,
       });
       localVideoRef.current.srcObject = localStreamRef.current;
+
+      setIsLocalStreamLoaded(true);
     } catch (err) {
       console.error('Error accessing local media:', err);
     }
   };
 
   const connectVideoSocket = () => {
-    // const socket = new SockJS(import.meta.env.VITE_SOCK_URL);
     const camKey = nickName;
 
     videoSocket.current = new Client({
-      // webSocketFactory: () => socket,
-      brokerURL: `ws://192.168.35.233:8080/ws`,
+      brokerURL: import.meta.env.VITE_SOCK_URL,
       debug: () => {},
       reconnectDelay: 5000, // 자동 재 연결
       heartbeatIncoming: 4000,
@@ -82,25 +83,8 @@ export default function VideoChatRoom() {
           onCandidate,
         );
         videoSocket.current.subscribe(
-          `/sub/channels/${selectedId}/call-members`,
-          onMembers,
-        );
-        videoSocket.current.subscribe(
           `/sub/channels/${selectedId}/receive-other`,
           onOthers,
-        );
-
-        // 먼저 채널에 접속했음을 알린다.
-        callMembers();
-
-        // 1초 후에, otherUsers 에 저장된 user 들에게 offer 를 보낸다.
-        sleep(1000).then(
-          async () =>
-            await Promise.all(
-              Object.keys(otherUsers.current).map(
-                async (receiver) => await sendOffer(receiver),
-              ),
-            ),
         );
       },
       onDisconnect: () => {
@@ -115,6 +99,41 @@ export default function VideoChatRoom() {
 
   const parseMessage = (message) => JSON.parse(message.body);
 
+  // 나간 유저 확인
+  const removeOutUsers = (userKeys) => {
+    const tempOtherUsers = { ...otherUsers.current };
+    const tempRemoteStreams = { ...remoteStreams };
+
+    for (const key of Object.keys(otherUsers.current)) {
+      if (userKeys.has(key)) continue;
+
+      delete tempOtherUsers[key];
+      if (remoteStreams[key] !== undefined) {
+        // remoteStreams 에서도 삭제
+        delete tempRemoteStreams[key];
+      }
+    }
+
+    // 수정된 값으로 덮어쓰기
+    otherUsers.current = { ...tempOtherUsers };
+    setRemoteStreams(tempRemoteStreams);
+  };
+
+  // 들어온 유저 확인
+  const addExistingUsers = (userKeys, myKey) => {
+    const tempOtherUsers = { ...otherUsers.current };
+    for (const key of userKeys) {
+      // 자기 자신은 추가하지 않음
+      if (key === myKey) continue;
+
+      // key가 원본에 없을때만 빈 object 추가
+      tempOtherUsers[key] ??= {};
+    }
+
+    // 수정된 값으로 덮어쓰기
+    otherUsers.current = { ...tempOtherUsers };
+  };
+
   // subscriber 함수 정의
 
   const onOffer = async (message) => {
@@ -127,7 +146,7 @@ export default function VideoChatRoom() {
     if (sender === nickName) return;
 
     // 보낸 사람(신규 유저)의 이름으로 rtc peer 만듦
-    const peerConnection = createPeerConnection(sender);
+    const peerConnection = await createPeerConnection(sender);
 
     // 기존에 설정한 peer 을 덮어쓰기
     otherUsers.current = {
@@ -136,14 +155,14 @@ export default function VideoChatRoom() {
     };
 
     // remote description 에 추가
-    await peerConnection.setRemoteDescription(offer);
+    peerConnection.setRemoteDescription(offer);
 
     // answer 생성 후 local description 에 추가
     const answer = await peerConnection.createAnswer();
-    await peerConnection.setLocalDescription(answer);
+    peerConnection.setLocalDescription(answer);
 
     // answer 보내기
-    await sendAnswer(sender, answer);
+    sendAnswer(sender, answer);
   };
 
   const onAnswer = async (message) => {
@@ -165,11 +184,7 @@ export default function VideoChatRoom() {
       [sender]: peerConnection,
     };
 
-    await peerConnection.setRemoteDescription(answer);
-
-    Object.keys(otherUsers.current).forEach((name) => {
-      console.log(name, otherUsers.current[name]);
-    });
+    peerConnection.setRemoteDescription(answer);
   };
 
   const onCandidate = async (message) => {
@@ -181,19 +196,12 @@ export default function VideoChatRoom() {
     // rtc peer를 바로 가져옴
     const peerConnection = otherUsers.current[sender];
 
-    if (peerConnection === undefined) {
+    if (!peerConnection) {
       throw new Error('없는 사용자로부터 온 ice-candidate 요청입니다.');
     }
 
     // iceCandidate 를 등록해줌
     await peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidate));
-  };
-
-  const onMembers = () => {
-    logClient('on members');
-
-    // 누군가 접속했다고 하면 자신의 정보를 준다.
-    sendMe();
   };
 
   const onOthers = async (message) => {
@@ -202,22 +210,26 @@ export default function VideoChatRoom() {
     // 다른 사람들의 정보를 받음
     const data = parseMessage(message);
 
-    console.log(data);
-    const { sender, channelId } = data;
+    const { userKeys } = data;
 
-    if (channelId !== selectedId) {
-      throw new Error('잘못된 채팅방으로부터 요청이 날아왔습니다.');
+    // 서버로부터 들어온 참여자 set
+    const userKeySet = new Set(userKeys);
+
+    // 먼저 나간사람 처리
+    removeOutUsers(userKeySet);
+    // 기존, 신규 유저 처리
+    addExistingUsers(userKeySet, nickName);
+
+    if (isNew.current) {
+      // 기존 유저들에게 offer 보냄
+      await Promise.all(
+        Object.keys(otherUsers.current).map(async (otherKey) => {
+          sendOffer(otherKey);
+        }),
+      );
+
+      isNew.current = false;
     }
-
-    // 자기 자신의 이름을 받으면 무시
-    if (sender === nickName) return;
-
-    // 리스트에 key만 추가
-
-    otherUsers.current = {
-      ...otherUsers.current,
-      [sender]: null, // sender 에 대해 없으면 추가
-    };
   };
 
   // publisher 함수 정의
@@ -234,7 +246,7 @@ export default function VideoChatRoom() {
     }
 
     // 상대방을 나타내는 RTC peer 생성
-    const peerConnection = createPeerConnection(receiver);
+    const peerConnection = await createPeerConnection(receiver);
 
     // 기존에 설정한 peer 을 덮어쓰기
     otherUsers.current = {
@@ -243,7 +255,7 @@ export default function VideoChatRoom() {
     };
 
     const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
+    peerConnection.setLocalDescription(offer);
 
     sendToVideoServer(`/pub/channels/${selectedId}/video/offer/${receiver}`, {
       sender: nickName,
@@ -271,30 +283,35 @@ export default function VideoChatRoom() {
       answer,
     });
   };
-  const callMembers = () => {
-    logClient('call members');
-    sendToVideoServer(`/pub/channels/${selectedId}/call-members`, {
-      sender: nickName,
-      channelId: selectedId,
-    });
-  };
-  const sendMe = () => {
-    logClient('send me');
+
+  const joinUser = () => {
+    logClient('join');
 
     sendToVideoServer(`/pub/channels/${selectedId}/send-me`, {
       sender: nickName,
       channelId: selectedId,
-      userKey: nickName, // TODO: userKey 에 정확한 값 넣기
+      userKey,
+      state: 'join',
+    });
+  };
+  const outUser = () => {
+    logClient('out');
+
+    sendToVideoServer(`/pub/channels/${selectedId}/send-me`, {
+      sender: nickName,
+      channelId: selectedId,
+      userKey,
+      state: 'out',
     });
   };
 
   // webRTC 관련 함수 정의
 
-  const createPeerConnection = (targetId) => {
+  const createPeerConnection = async (targetId) => {
     const peerConnection = new RTCPeerConnection(configuration);
 
     peerConnection.onicecandidate = (event) => {
-      logClient(`onicecandidate: ${event}`);
+      logClient(`onicecandidate`);
       if (!event.candidate) return;
 
       sendToVideoServer(
@@ -314,6 +331,10 @@ export default function VideoChatRoom() {
         [targetId]: event.streams[0],
       }));
     };
+
+    if (!localStreamRef.current) {
+      await startLocalStream();
+    }
 
     localStreamRef.current?.getTracks().forEach((track) => {
       peerConnection.addTrack(track, localStreamRef.current);
@@ -344,22 +365,6 @@ export default function VideoChatRoom() {
     videoSocket.current.deactivate();
   };
 
-  // 소켓 activate 및 deactivate
-  useEffect(() => {
-    // 이미 소켓이 있으면 정리해준다
-    if (videoSocket.current) {
-      endCall();
-    }
-
-    startLocalStream(); // 카메라, 마이크 on
-    connectVideoSocket(); // 소켓 연결
-
-    // component unmount 시 소켓 정리
-    return () => {
-      endCall();
-    };
-  }, [selectedId]);
-
   const toggleCamera = () => {
     const videoTrack = localStreamRef.current
       ?.getVideoTracks()
@@ -379,6 +384,32 @@ export default function VideoChatRoom() {
       setIsMicOn(audioTrack.enabled);
     }
   };
+
+  // 소켓 activate 및 deactivate
+  useEffect(() => {
+    // 이미 소켓이 있으면 정리해준다
+    if (videoSocket.current) {
+      endCall();
+    }
+
+    startLocalStream(); // 카메라, 마이크 on
+    connectVideoSocket(); // 소켓 연결
+
+    // component unmount 시 소켓 정리
+    return () => {
+      endCall();
+    };
+  }, [selectedId]);
+
+  const doSend = async () => {};
+
+  // local stream 세팅 시
+  useEffect(() => {
+    if (isLocalStreamLoaded) {
+      // 먼저 채널에 접속했음을 알린다.
+      joinUser();
+    }
+  }, [isLocalStreamLoaded]);
 
   return (
     <div className="video-chat-wrapper">
@@ -414,6 +445,9 @@ export default function VideoChatRoom() {
         <button
           className="end"
           onClick={() => {
+            // 다른 사용자들에게 나간 것 알리기
+            outUser();
+
             endCall();
             navigation('/channels');
             // 다시 채널 불러오도록 하기
