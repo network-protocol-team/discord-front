@@ -6,8 +6,7 @@ import ChatBubbleIcon from "@mui/icons-material/ChatBubble";
 import { useChatStore } from "../data/store";
 import { axiosApi } from "../utils/axios";
 import * as StompJs from "@stomp/stompjs";
-import SockJS from 'sockjs-client';
-
+import SockJS from "sockjs-client";
 
 export default function TextChatRoom() {
   const selectedChatRoom = useChatStore((state) => state.selectedChatRoom);
@@ -34,14 +33,17 @@ export default function TextChatRoom() {
     setChat("");
   };
 
-  const connect= () => {
+  const connect = () => {
     const socket = new SockJS(import.meta.env.VITE_SOCK_URL);
     chatSocket.current = new StompJs.Client({
       webSocketFactory: () => socket,
       onConnect: () => {
         console.log("Connected to chat webSocket");
 
-        chatSocket.current.subscribe(`/sub/channels/${selectedId}/text`, chatUpdate);
+        chatSocket.current.subscribe(
+          `/sub/channels/${selectedId}/text`,
+          chatUpdate
+        );
       },
     });
     chatSocket.current.activate();
@@ -52,8 +54,8 @@ export default function TextChatRoom() {
   };
 
   const chatUpdate = (message) => {
-      const json_body = JSON.parse(message.body).result;
-      setChatArray((_chat_list) => [..._chat_list, json_body]);
+    const json_body = JSON.parse(message.body).result;
+    setChatArray((_chat_list) => [..._chat_list, json_body]);
   };
 
   const handleChange = (event) => {
