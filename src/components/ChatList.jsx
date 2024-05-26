@@ -31,8 +31,8 @@ export default function ChatList() {
   };
 
   const createRoom = (e) => {
-    const channel_name = inputRef.current.value;
-    const data = { channel_name };
+    const channelName = inputRef.current.value;
+    const data = { channelName };
 
     axiosApi
       .post(`/channels`, data)
@@ -42,10 +42,12 @@ export default function ChatList() {
           throw new Error(message);
         }
 
-        const { id, channel_name } = result;
+        const { id, channelName } = result;
+
+        console.log(channels);
 
         // 성공하면 채팅방에 추가
-        setChannels([...channels, { id, channel_name }]);
+        setChannels([...channels, { id, channelName }]);
 
         // 모달 닫기
         closeModal();
@@ -110,13 +112,14 @@ export default function ChatList() {
         </header>
         <hr className="hr-light" />
         <ul>
-          {channels.map(({ channel_name: channelName, id: channelId }) => (
-            <ChatListItem
-              channelName={channelName}
-              channelId={channelId}
-              key={channelId}
-            />
-          ))}
+          {channels &&
+            channels.map(({ channelName, channelId }) => (
+              <ChatListItem
+                channelName={channelName}
+                channelId={channelId}
+                key={channelId}
+              />
+            ))}
         </ul>
         <footer>
           <img src={ProfileImage} alt="프로필 사진" />

@@ -1,15 +1,22 @@
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
+import VideocamIcon from '@mui/icons-material/Videocam';
+import VideocamOffIcon from '@mui/icons-material/VideocamOff';
 import MicIcon from '@mui/icons-material/Mic';
+import MicOffIcon from '@mui/icons-material/MicOff';
 import CallEndIcon from '@mui/icons-material/CallEnd';
 import { useChatStore } from '../data/store';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { useEffect, useRef, useState } from 'react';
 import { sendToServer } from '../utils/socket';
-import { logClient, sleep } from '../utils/common';
+import { sleep } from '../utils/common';
 import { Exception } from 'sass';
+import { useNavigate } from 'react-router-dom';
 
 export default function VideoChatRoom() {
+  const navigation = useNavigate();
+  const setSelectedId = useChatStore((state) => state.setSelectedId);
+
   // 소켓은 ref 로 관리
   const videoSocket = useRef(null);
   const localVideoRef = useRef(null);
@@ -21,8 +28,13 @@ export default function VideoChatRoom() {
 
   // const [otherUsers, setOtherUsers] = useState({});
   const [remoteStreams, setRemoteStreams] = useState({});
+  const [isCameraOn, setIsCameraOn] = useState(true);
+  const [isMicOn, setIsMicOn] = useState(true);
+  const [isLocalStreamLoaded, setIsLocalStreamLoaded] = useState(false);
+  const [outUsers, setOutUsers] = useState([]);
 
   const otherUsers = useRef({});
+  const isNew = useRef(true);
 
   // videoSocket 용 signaling 서버로 보내는 함수
   const sendToVideoServer = sendToServer(videoSocket);
@@ -41,25 +53,27 @@ export default function VideoChatRoom() {
         audio: true,
       });
       localVideoRef.current.srcObject = localStreamRef.current;
+
+      setIsLocalStreamLoaded(true);
     } catch (err) {
       console.error('Error accessing local media:', err);
     }
   };
 
   const connectVideoSocket = () => {
-    const socket = new SockJS(import.meta.env.VITE_SOCK_URL);
+    // const socket = new SockJS(import.meta.env.VITE_SOCK_URL);
     const camKey = nickName;
 
     videoSocket.current = new Client({
-      webSocketFactory: () => socket,
+      // webSocketFactory: () => socket,
+      brokerURL: import.meta.env.VITE_SOCK_URL,
       debug: () => {},
       reconnectDelay: 5000, // 자동 재 연결
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
 
       onConnect: () => {
-        logClient('Connected to video webSocket');
-
+        console.log('Connected to video webSocket');
         // subscribe api 작성
 
         videoSocket.current.subscribe(
@@ -75,25 +89,8 @@ export default function VideoChatRoom() {
           onCandidate,
         );
         videoSocket.current.subscribe(
-          `/sub/channels/${selectedId}/call-members`,
-          onMembers,
-        );
-        videoSocket.current.subscribe(
           `/sub/channels/${selectedId}/receive-other`,
           onOthers,
-        );
-
-        // 먼저 채널에 접속했음을 알린다.
-        callMembers();
-
-        // 1초 후에, otherUsers 에 저장된 user 들에게 offer 를 보낸다.
-        sleep(1000).then(
-          async () =>
-            await Promise.all(
-              Object.keys(otherUsers.current).map(
-                async (receiver) => await sendOffer(receiver),
-              ),
-            ),
         );
       },
       onDisconnect: () => {
@@ -108,11 +105,20 @@ export default function VideoChatRoom() {
 
   const parseMessage = (message) => JSON.parse(message.body);
 
+  // 나간 유저 찾기
+  const findOutUsers = (userKeys) => {
+    const users = [];
+
+    for (const key of Object.keys(otherUsers.current)) {
+      if (!userKeys.has(key)) users.push(key);
+    }
+
+    return users;
+  };
+
   // subscriber 함수 정의
 
   const onOffer = async (message) => {
-    logClient('on offer');
-
     const data = parseMessage(message);
     const { sender, offer } = data;
 
@@ -129,19 +135,17 @@ export default function VideoChatRoom() {
     };
 
     // remote description 에 추가
-    await peerConnection.setRemoteDescription(offer);
+    peerConnection.setRemoteDescription(offer);
 
     // answer 생성 후 local description 에 추가
     const answer = await peerConnection.createAnswer();
-    await peerConnection.setLocalDescription(answer);
+    peerConnection.setLocalDescription(answer);
 
     // answer 보내기
-    await sendAnswer(sender, answer);
+    sendAnswer(sender, answer);
   };
 
   const onAnswer = async (message) => {
-    logClient('on answer');
-
     const data = parseMessage(message);
     const { sender, answer } = data;
 
@@ -158,74 +162,52 @@ export default function VideoChatRoom() {
       [sender]: peerConnection,
     };
 
-    await peerConnection.setRemoteDescription(answer);
-
-    Object.keys(otherUsers.current).forEach((name) => {
-      console.log(name, otherUsers.current[name]);
-    });
+    peerConnection.setRemoteDescription(answer);
   };
 
   const onCandidate = async (message) => {
-    logClient('on candidate');
-
     const data = parseMessage(message);
     const { sender, iceCandidate } = data;
 
     // rtc peer를 바로 가져옴
     const peerConnection = otherUsers.current[sender];
 
-    if (peerConnection === undefined) {
-      throw new Error('없는 사용자로부터 온 ice-candidate 요청입니다.');
-    }
+    if (peerConnection === undefined) return;
 
     // iceCandidate 를 등록해줌
     await peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidate));
   };
 
-  const onMembers = () => {
-    logClient('on members');
-
-    // 누군가 접속했다고 하면 자신의 정보를 준다.
-    sendMe();
-  };
-
   const onOthers = async (message) => {
-    logClient('on others');
-
     // 다른 사람들의 정보를 받음
     const data = parseMessage(message);
+    const { userKeys } = data;
 
-    console.log(data);
-    const { sender, channelId } = data;
+    const userKeySet = new Set(userKeys);
 
-    if (channelId !== selectedId) {
-      throw new Error('잘못된 채팅방으로부터 요청이 날아왔습니다.');
+    // 나간 유저 제거
+    setOutUsers(findOutUsers(userKeySet));
+
+    // 새로 들어온 사람만 offer 보내기
+    if (isNew.current) {
+      // local stream 갱신을 위한 io-bound job 수행
+      await sleep(1000);
+
+      await Promise.all(
+        userKeys.map(async (receiver) => {
+          if (receiver === nickName) return;
+          return await sendOffer(receiver);
+        }),
+      );
+
+      isNew.current = false;
     }
-
-    // 자기 자신의 이름을 받으면 무시
-    if (sender === nickName) return;
-
-    // 리스트에 key만 추가
-
-    otherUsers.current = {
-      ...otherUsers.current,
-      [sender]: null, // sender 에 대해 없으면 추가
-    };
   };
 
   // publisher 함수 정의
 
   // 현재 유저(신규 가입자; nickName)가 다른 유저(receiver)에게 offer 보냄
   const sendOffer = async (receiver) => {
-    logClient('send offer');
-
-    // 자기 자신의 이름을 받으면 무시
-    if (receiver === nickName) return;
-
-    if (otherUsers.current[receiver] === undefined) {
-      throw new Error('없는 사용자에게 offer 를 보내려고 합니다.');
-    }
-
     // 상대방을 나타내는 RTC peer 생성
     const peerConnection = createPeerConnection(receiver);
 
@@ -236,7 +218,7 @@ export default function VideoChatRoom() {
     };
 
     const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
+    peerConnection.setLocalDescription(offer);
 
     sendToVideoServer(`/pub/channels/${selectedId}/video/offer/${receiver}`, {
       sender: nickName,
@@ -248,15 +230,6 @@ export default function VideoChatRoom() {
 
   // 기존 유저가 신규 유저에게 answer 보냄
   const sendAnswer = (receiver, answer) => {
-    logClient('send answer');
-
-    // 자기 자신의 이름을 받으면 무시
-    if (receiver === nickName) return;
-
-    if (otherUsers.current[receiver] === undefined) {
-      throw new Error('없는 사용자에게 answer 를 보내려고 합니다.');
-    }
-
     sendToVideoServer(`/pub/channels/${selectedId}/video/answer/${receiver}`, {
       sender: nickName,
       channelId: selectedId,
@@ -264,20 +237,23 @@ export default function VideoChatRoom() {
       answer,
     });
   };
-  const callMembers = () => {
-    logClient('call members');
-    sendToVideoServer(`/pub/channels/${selectedId}/call-members`, {
-      sender: nickName,
-      channelId: selectedId,
-    });
-  };
-  const sendMe = () => {
-    logClient('send me');
 
+  const joinUser = () => {
     sendToVideoServer(`/pub/channels/${selectedId}/send-me`, {
       sender: nickName,
       channelId: selectedId,
-      userKey: nickName, // TODO: userKey 에 정확한 값 넣기
+      userKey,
+      state: 'join',
+    });
+  };
+
+  const outUser = () => {
+    console.log('out user');
+    sendToVideoServer(`/pub/channels/${selectedId}/send-me`, {
+      sender: nickName,
+      channelId: selectedId,
+      userKey,
+      state: 'out',
     });
   };
 
@@ -287,7 +263,6 @@ export default function VideoChatRoom() {
     const peerConnection = new RTCPeerConnection(configuration);
 
     peerConnection.onicecandidate = (event) => {
-      logClient(`onicecandidate: ${event}`);
       if (!event.candidate) return;
 
       sendToVideoServer(
@@ -316,14 +291,6 @@ export default function VideoChatRoom() {
   };
 
   const endCall = () => {
-    // 연결한 rtc peer 들 해제
-    Object.values(otherUsers.current).forEach((peerConnection) =>
-      peerConnection.close(),
-    );
-    otherUsers.current = {};
-    // setOtherUsers({});
-    setRemoteStreams({});
-
     // 카메라, 마이크 off
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -332,6 +299,20 @@ export default function VideoChatRoom() {
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = null;
     }
+
+    try {
+      outUser();
+    } catch {
+      //
+    }
+
+    // 연결한 rtc peer 들 해제
+    Object.values(otherUsers.current).forEach((peerConnection) =>
+      peerConnection.close(),
+    );
+    otherUsers.current = {};
+    // setOtherUsers({});
+    setRemoteStreams({});
 
     // 소켓 닫기
     videoSocket.current.deactivate();
@@ -353,36 +334,107 @@ export default function VideoChatRoom() {
     };
   }, [selectedId]);
 
+  useEffect(() => {
+    if (isLocalStreamLoaded) {
+      // 먼저 채널에 접속했음을 알린다.
+      joinUser();
+    }
+  }, [isLocalStreamLoaded]);
+
+  useEffect(() => {
+    const tempRemoteStreams = { ...remoteStreams };
+    const tempOtherUsers = { ...otherUsers.current };
+    outUsers.forEach((user) => {
+      delete tempRemoteStreams[user];
+      delete tempOtherUsers[user];
+    });
+
+    otherUsers.current = tempOtherUsers;
+    setRemoteStreams(tempRemoteStreams);
+  }, [outUsers]);
+
+  const toggleCamera = () => {
+    const videoTrack = localStreamRef.current
+      ?.getVideoTracks()
+      .find((track) => track.kind === 'video');
+    if (videoTrack) {
+      videoTrack.enabled = !videoTrack.enabled;
+      setIsCameraOn(videoTrack.enabled);
+    }
+  };
+
+  const toggleMic = () => {
+    const audioTrack = localStreamRef.current
+      ?.getAudioTracks()
+      .find((track) => track.kind === 'audio');
+    if (audioTrack) {
+      audioTrack.enabled = !audioTrack.enabled;
+      setIsMicOn(audioTrack.enabled);
+    }
+  };
+
   return (
     <div className="video-chat-wrapper">
       <div className="video-grid">
-        <video
-          ref={localVideoRef}
-          autoPlay
-          playsInline
-          muted
-          style={{ width: '300px', marginRight: '20px' }}
-        />
-        {Object.entries(remoteStreams).map(([peerId, stream]) => (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <span>나 ({nickName})</span>
           <video
-            key={peerId}
-            ref={(video) => {
-              if (video) video.srcObject = stream;
-            }}
+            className="video-p2p"
+            ref={localVideoRef}
             autoPlay
             playsInline
+            muted
             style={{ width: '300px', marginRight: '20px' }}
           />
+        </div>
+        {Object.entries(remoteStreams).map(([peerId, stream]) => (
+          <div
+            key={peerId}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <span>{peerId}</span>
+            <video
+              ref={(video) => {
+                if (video) video.srcObject = stream;
+              }}
+              className="video-p2p"
+              autoPlay
+              playsInline
+              style={{ width: '300px', marginRight: '20px' }}
+            />
+          </div>
         ))}
       </div>
       <div className="video-buttons">
-        <button className="camera">
-          <CameraAltIcon />
+        <button
+          className={`camera ${isCameraOn ? 'active' : ''}`}
+          onClick={toggleCamera}
+        >
+          {isCameraOn ? <VideocamIcon /> : <VideocamOffIcon />}
         </button>
-        <button className="mic">
-          <MicIcon />
+        <button
+          className={`mic ${isMicOn ? 'active' : ''}`}
+          onClick={toggleMic}
+        >
+          {isMicOn ? <MicIcon /> : <MicOffIcon />}
         </button>
-        <button className="end">
+        <button
+          className="end"
+          onClick={() => {
+            endCall();
+            navigation('/channels');
+            // 다시 채널 불러오도록 하기
+            setSelectedId('');
+          }}
+        >
           <CallEndIcon />
         </button>
       </div>
