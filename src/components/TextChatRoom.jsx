@@ -20,17 +20,26 @@ export default function TextChatRoom() {
   const [chat, setChat] = useState("");
 
   const publish = (chat) => {
-    if (!chatSocket.current.connected) return;
+    if (!chatSocket.current || !chatSocket.current.connected) {
+      console.log("Socket is not connected");
+      return;
+    }
 
-    chatSocket.current.publish({
-      destination: "/pub/channels/${selectedId}/text",
-      body: JSON.stringify({
-        nickName: selectedNickname,
-        content: chat,
-      }),
-    });
+    try {
+      console.log("Publishing chat:", chat);
 
-    setChat("");
+      chatSocket.current.publish({
+        destination: `/pub/channels/${selectedId}/text`,
+        body: JSON.stringify({
+          nickName: selectedNickname,
+          content: chat,
+        }),
+      });
+
+      setChat("");
+    } catch (error) {
+      console.error("Failed to publish chat:", error);
+    }
   };
 
   const connect = () => {
@@ -45,12 +54,20 @@ export default function TextChatRoom() {
           chatUpdate
         );
       },
+      onDisconnect: () => {
+        console.log("Disconnected from chat webSocket");
+      },
+      debug: (str) => {
+        console.log(str);
+      },
     });
     chatSocket.current.activate();
   };
 
   const disconnect = () => {
-    chatSocket.current.deactivate();
+    if (chatSocket.current) {
+      chatSocket.current.deactivate();
+    }
   };
 
   const chatUpdate = (message) => {
@@ -62,7 +79,7 @@ export default function TextChatRoom() {
     setChat(event.target.value);
   };
 
-  const handleSubmit = (event, chat) => {
+  const handleSubmit = (event) => {
     event.preventDefault();
     publish(chat);
   };
@@ -134,7 +151,7 @@ export default function TextChatRoom() {
               onChange={handleChangeAndResize}
               value={chat}
             />
-            <SendIcon onClick={(event) => handleSubmit(event, chat)} />
+            <SendIcon onClick={handleSubmit} />
           </div>
         </div>
       </div>

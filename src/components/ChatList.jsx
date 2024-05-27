@@ -63,11 +63,24 @@ export default function ChatList() {
     e.preventDefault();
   };
 
+  const deleteAllCookies = () => {
+    const cookies = document.cookie.split(";");
+
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i];
+      const eqPos = cookie.indexOf("=");
+      const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+    }
+  };
+
   const logout = () => {
-    // TODO: 쿠키 및 클라이언트 상태 삭제
     const isLogout = confirm('정말로 로그아웃 하시겠습니까?');
 
     if (!isLogout) return;
+
+    // 쿠키 삭제
+    deleteAllCookies();
 
     resetStore();
     clearChatStorage();

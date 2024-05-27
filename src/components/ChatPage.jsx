@@ -7,10 +7,8 @@ import { useChatStore, useTempStore } from '../data/store';
 import { axiosApi } from '../utils/axios';
 
 // 쿠키를 확인하는 유틸리티 함수
-const getCookie = (name) => {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop().split(';').shift();
+const checkCookiesExist = () => {
+  return document.cookie !== "";
 };
 
 export default function ChatPage() {
@@ -23,11 +21,11 @@ export default function ChatPage() {
 
   const fetchTriggered = useTempStore((state) => state.triggered);
 
-  // 페이지 로딩 시 쿠키가 없으면 /channels로 이동
+  // 페이지 로딩 시 쿠키가 없으면 /users로 이동
   useEffect(() => {
-    const userId = getCookie('userId');
-    if (!userId) {
-      //navigate('/users');
+    const cookiesExist = checkCookiesExist();
+    if (!cookiesExist) {
+      navigate('/users');
     }
   }, [navigate]);
 
