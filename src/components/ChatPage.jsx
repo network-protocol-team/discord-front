@@ -6,9 +6,11 @@ import ChatRoom from './ChatRoom';
 import { useEffect } from 'react';
 import { useChatStore, useTempStore } from '../data/store';
 import { axiosApi } from '../utils/axios';
+import { useCookies } from 'react-cookie';
 
 export default function ChatPage() {
   const { channelId } = useParams();
+  const [cookies] = useCookies(['userId']);
   const channels = useChatStore((state) => state.channels);
   const setChannels = useChatStore((state) => state.setChannels);
   const setSelectedId = useChatStore((state) => state.setSelectedId);
@@ -17,6 +19,10 @@ export default function ChatPage() {
   );
 
   const fetchTriggered = useTempStore((state) => state.triggered);
+
+  useEffect(() => {
+    console.log('cookie: ', cookies.userId);
+  }, [cookies]);
 
   // 이 부분에 추가
   useEffect(() => {
