@@ -8,16 +8,16 @@ import { Modal } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useChatStore, useTempStore } from '../data/store';
 import { axiosApi } from '../utils/axios';
+import { useEject } from '../hooks/users';
 
 export default function ChatList() {
   const navigation = useNavigate();
-  const clearChatStorage = useChatStore.persist.clearStorage; // 세션 스토리지 삭제 함수
+  const eject = useEject();
 
   const channels = useChatStore((state) => state.channels);
   const setChannels = useChatStore((state) => state.setChannels);
   const nickName = useChatStore((state) => state.nickName);
 
-  const resetStore = useChatStore((state) => state.reset);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const inputRef = useRef();
 
@@ -63,10 +63,7 @@ export default function ChatList() {
 
     if (!isLogout) return;
 
-    resetStore();
-    clearChatStorage();
-
-    navigation('/users');
+    eject();
   };
 
   const handleInputChange = (e) => {

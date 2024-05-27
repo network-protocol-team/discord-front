@@ -1,16 +1,19 @@
 import '../styles/ChatPage.scss';
 
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import ChatList from './ChatList';
 import ChatRoom from './ChatRoom';
 import { useEffect } from 'react';
 import { useChatStore, useTempStore } from '../data/store';
 import { axiosApi } from '../utils/axios';
-import { useCookies } from 'react-cookie';
+import { getCookie } from '../utils/cookie';
+import { useEject } from '../hooks/users';
 
 export default function ChatPage() {
   const { channelId } = useParams();
-  const [cookies] = useCookies(['userId']);
+  const eject = useEject();
+
+  const userId = useChatStore((state) => state.userId);
   const channels = useChatStore((state) => state.channels);
   const setChannels = useChatStore((state) => state.setChannels);
   const setSelectedId = useChatStore((state) => state.setSelectedId);
@@ -20,9 +23,13 @@ export default function ChatPage() {
 
   const fetchTriggered = useTempStore((state) => state.triggered);
 
+  // 쿠키가 적절하게 박혀 있는지 확인
   useEffect(() => {
-    console.log('cookie: ', cookies.userId);
-  }, [cookies]);
+    if (userId !== getCookie('userId')) {
+      // 잘못된 쿠키면 추방
+      eject();
+    }
+  }, [userId]);
 
   // 이 부분에 추가
   useEffect(() => {
