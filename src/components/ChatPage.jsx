@@ -1,19 +1,19 @@
 import '../styles/ChatPage.scss';
-import { useParams, useNavigate } from 'react-router-dom';
+
+import { useNavigate, useParams } from 'react-router-dom';
 import ChatList from './ChatList';
 import ChatRoom from './ChatRoom';
 import { useEffect } from 'react';
 import { useChatStore, useTempStore } from '../data/store';
 import { axiosApi } from '../utils/axios';
-
-// 쿠키를 확인하는 유틸리티 함수
-const checkCookiesExist = () => {
-  return document.cookie !== "";
-};
+import { getCookie } from '../utils/cookie';
+import { useEject } from '../hooks/users';
 
 export default function ChatPage() {
   const { channelId } = useParams();
-  const navigate = useNavigate(); // useNavigate 훅 사용
+  const eject = useEject();
+
+  const userId = useChatStore((state) => state.userId);
   const channels = useChatStore((state) => state.channels);
   const setChannels = useChatStore((state) => state.setChannels);
   const setSelectedId = useChatStore((state) => state.setSelectedId);
@@ -21,14 +21,15 @@ export default function ChatPage() {
 
   const fetchTriggered = useTempStore((state) => state.triggered);
 
-  // 페이지 로딩 시 쿠키가 없으면 /users로 이동
+  // 쿠키가 적절하게 박혀 있는지 확인
   useEffect(() => {
-    const cookiesExist = checkCookiesExist();
-    if (!cookiesExist) {
-      navigate('/users');
+    if (userId !== getCookie('userId')) {
+      // 잘못된 쿠키면 추방
+      eject();
     }
-  }, [navigate]);
+  }, [userId]);
 
+  // 이 부분에 추가
   useEffect(() => {
     if (channelId === undefined) return;
 
@@ -51,8 +52,8 @@ export default function ChatPage() {
         }
 
         // 성공하면 서버에서 받아온 channel 들로 등록
-        const { channels } = result;
-        setChannels(channels);
+        const { channelList } = result;
+        setChannels(channelList);
       })
       .catch((err) => console.error(err));
   }, [setChannels, channelId, fetchTriggered]);

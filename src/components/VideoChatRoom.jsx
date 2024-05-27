@@ -1,11 +1,9 @@
-import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import VideocamOffIcon from '@mui/icons-material/VideocamOff';
 import MicIcon from '@mui/icons-material/Mic';
 import MicOffIcon from '@mui/icons-material/MicOff';
 import CallEndIcon from '@mui/icons-material/CallEnd';
 import { useChatStore } from '../data/store';
-import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { useEffect, useRef, useState } from 'react';
 import { sendToServer } from '../utils/socket';
@@ -248,7 +246,6 @@ export default function VideoChatRoom() {
   };
 
   const outUser = () => {
-    console.log('out user');
     sendToVideoServer(`/pub/channels/${selectedId}/send-me`, {
       sender: nickName,
       channelId: selectedId,

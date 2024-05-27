@@ -5,7 +5,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 const chatStoreInit = {
   nickName: '', // 닉네임
-  userId: 0, // 유저 id
+  userId: '', // 유저 id
   chats: [], // 한 채널의 채팅들
   channels: [], // 채널 정보들
   selectedId: '', // 선택된 채널의 id
