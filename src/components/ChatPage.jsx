@@ -42,8 +42,8 @@ export default function ChatPage() {
         }
 
         // 성공하면 서버에서 받아온 channel 들로 등록
-        const { channels } = result;
-        setChannels(channels);
+        const { channelList } = result;
+        setChannels(channelList);
       })
       .catch((err) => console.error(err));
   }, [setChannels, channelId, fetchTriggered]);
