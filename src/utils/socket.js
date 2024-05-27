@@ -13,3 +13,5 @@ export const sendToServer =
       headers,
     });
   };
+
+export const parseMessage = (message) => JSON.parse(message.body);
