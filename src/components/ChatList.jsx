@@ -41,18 +41,16 @@ export default function ChatList() {
           throw new Error(message);
         }
 
-        const { id, channelName } = result;
-
-        console.log(channels);
+        const { channelId, channelName } = result;
 
         // 성공하면 채팅방에 추가
-        setChannels([...channels, { id, channelName }]);
+        setChannels([...channels, { channelId, channelName }]);
 
         // 모달 닫기
         closeModal();
 
         // 새롭게 생성한 채팅방으로 이동
-        navigation(`/channels/${id}`);
+        navigation(`/channels/${channelId}`);
       })
       .catch((err) => console.error(err));
 
