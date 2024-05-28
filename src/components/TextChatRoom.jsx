@@ -7,7 +7,6 @@ import { useChatStore } from "../data/store";
 import { axiosApi } from "../utils/axios";
 import * as StompJs from "@stomp/stompjs";
 import { parseMessage } from "../utils/socket";
-import { useControlled } from "@mui/material";
 
 export default function TextChatRoom() {
   const selectedChatRoom = useChatStore((state) => state.selectedChatRoom);
@@ -87,7 +86,6 @@ export default function TextChatRoom() {
       ..._chat_list,
       { nickName, content, createdAt: newcreatedAt },
     ]);
-    console.log(nickName, content, newcreatedAt);
   };
 
   const handleChange = (event) => {
@@ -119,9 +117,6 @@ export default function TextChatRoom() {
 
         const newChats = [...result.messageList];
 
-        console.log(newChats);
-
-        
         newChats.map(
           (newChat) =>
             (newChat.createdAt =
