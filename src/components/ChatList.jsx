@@ -9,8 +9,9 @@ import { useNavigate } from 'react-router-dom';
 import { useChatStore, useTempStore } from '../data/store';
 import { axiosApi } from '../utils/axios';
 import { useEject } from '../hooks/users';
+import { sleep } from '../utils/common';
 
-export default function ChatList() {
+export default function ChatList({ publish }) {
   const navigation = useNavigate();
   const eject = useEject();
 
@@ -43,11 +44,16 @@ export default function ChatList() {
 
         const { channelId, channelName } = result;
 
-        // 성공하면 채팅방에 추가
-        setChannels([...channels, { channelId, channelName }]);
-
         // 모달 닫기
         closeModal();
+
+        // 다른 유저에게 알리기
+        publish(`/pub/channels/manage`, {
+          sender: nickName,
+          channelId,
+          channelName,
+          status: 'create',
+        });
 
         // 새롭게 생성한 채팅방으로 이동
         navigation(`/channels/${channelId}`);
@@ -103,6 +109,7 @@ export default function ChatList() {
               <ChatListItem
                 channelName={channelName}
                 channelId={channelId}
+                publish={publish}
                 key={channelId}
               />
             ))}
@@ -117,12 +124,17 @@ export default function ChatList() {
   );
 }
 
-const ChatListItem = ({ channelName, channelId }) => {
+const ChatListItem = ({ channelName, channelId, publish }) => {
   const navigate = useNavigate();
   const selectedId = useChatStore((state) => state.selectedId);
-  const selectItem = (id) => {
+  const selectItem = async (id) => {
+    navigate(`/channels`);
+
+    // 소켓 정리를 위해 io bound job 수행
+    await sleep(1);
     navigate(`/channels/${id}`);
   };
+  const nickName = useChatStore((state) => state.nickName);
 
   const triggerFetch = useTempStore((state) => state.trigger);
 
@@ -145,6 +157,12 @@ const ChatListItem = ({ channelName, channelId }) => {
         }
 
         // TODO: 소켓 연결 끊기
+        publish(`/pub/channels/manage`, {
+          sender: nickName,
+          channelId,
+          channelName,
+          status: 'delete',
+        });
 
         // 지금 들어온 채팅방을 삭제하면 메인 페이지로 이동
         if (id === selectedId) {
