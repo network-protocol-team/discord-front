@@ -1,12 +1,13 @@
-import { useRef, useState, useEffect } from 'react';
-import Profile from './Profile';
-import ProfileImage from '../assets/sample.png';
-import SendIcon from '@mui/icons-material/Send';
-import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
-import { useChatStore } from '../data/store';
-import { axiosApi } from '../utils/axios';
-import * as StompJs from '@stomp/stompjs';
-import { parseMessage } from '../utils/socket';
+import { useRef, useState, useEffect } from "react";
+import Profile from "./Profile";
+import ProfileImage from "../assets/sample.png";
+import SendIcon from "@mui/icons-material/Send";
+import ChatBubbleIcon from "@mui/icons-material/ChatBubble";
+import { useChatStore } from "../data/store";
+import { axiosApi } from "../utils/axios";
+import * as StompJs from "@stomp/stompjs";
+import { parseMessage } from "../utils/socket";
+import { useControlled } from "@mui/material";
 
 export default function TextChatRoom() {
   const selectedChatRoom = useChatStore((state) => state.selectedChatRoom);
@@ -18,16 +19,16 @@ export default function TextChatRoom() {
   const [chatArray, setChatArray] = useState([]);
   const [refresh, setRefresh] = useState(false);
 
-  const [chat, setChat] = useState('');
+  const [chat, setChat] = useState("");
 
   const publish = (chat) => {
     if (!chatSocket.current || !chatSocket.current.connected) {
-      console.log('Socket is not connected');
+      console.log("Socket is not connected");
       return;
     }
 
     try {
-      console.log('Publishing chat:', chat);
+      console.log("Publishing chat:", chat);
 
       chatSocket.current.publish({
         destination: `/pub/channels/${selectedId}/text`,
@@ -37,15 +38,15 @@ export default function TextChatRoom() {
         }),
       });
 
-      setChat('');
+      setChat("");
     } catch (error) {
-      console.error('Failed to publish chat:', error);
+      console.error("Failed to publish chat:", error);
     }
   };
 
   const connect = () => {
     if (chatSocket.current && chatSocket.current.connected) {
-      console.log('Socket is already connected');
+      console.log("Socket is already connected");
       return;
     }
 
@@ -56,11 +57,11 @@ export default function TextChatRoom() {
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       onConnect: () => {
-        console.log('Connected to chat webSocket');
+        console.log("Connected to chat webSocket");
 
         chatSocket.current.subscribe(
           `/sub/channels/${selectedId}/text`,
-          chatUpdate,
+          chatUpdate
         );
       },
       onStompError: (frame) => {
@@ -80,7 +81,8 @@ export default function TextChatRoom() {
   const chatUpdate = (message) => {
     const json_body = parseMessage(message);
     const { nickName, content, createdAt } = json_body.result;
-    const newcreatedAt = createdAt.substring(0,10) + " " + createdAt.substring(11, 19)
+    const newcreatedAt =
+      createdAt.substring(0, 10) + " " + createdAt.substring(11, 19);
     setChatArray((_chat_list) => [
       ..._chat_list,
       { nickName, content, createdAt: newcreatedAt },
@@ -98,7 +100,7 @@ export default function TextChatRoom() {
   };
 
   const handleKeyPress = (event) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       handleSubmit(event);
     }
@@ -117,6 +119,15 @@ export default function TextChatRoom() {
 
         const newChats = [...result.messageList];
 
+        console.log(newChats);
+
+        
+        newChats.map(
+          (newChat) =>
+            (newChat.createdAt =
+              newChat.createdAt.substring(0, 10) + " " + newChat.createdAt.substring(11, 19))
+        );
+
         setChatArray(newChats);
       });
 
@@ -124,8 +135,8 @@ export default function TextChatRoom() {
   };
 
   const handleResizeHeight = () => {
-    textareaRef.current.style.height = 'auto';
-    textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    textareaRef.current.style.height = "auto";
+    textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
   };
 
   const handleRefresh = () => {
