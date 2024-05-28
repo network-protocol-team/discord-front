@@ -17,7 +17,9 @@ export default function ChatPage() {
   const channels = useChatStore((state) => state.channels);
   const setChannels = useChatStore((state) => state.setChannels);
   const setSelectedId = useChatStore((state) => state.setSelectedId);
-  const setSelectedChatRoom = useChatStore((state) => state.setSelectedChatRoom);
+  const setSelectedChatRoom = useChatStore(
+    (state) => state.setSelectedChatRoom,
+  );
 
   const fetchTriggered = useTempStore((state) => state.triggered);
 
@@ -25,7 +27,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (userId !== getCookie('userId')) {
       // 잘못된 쿠키면 추방
-      eject();
+      //eject();
     }
   }, [userId]);
 
@@ -43,6 +45,7 @@ export default function ChatPage() {
 
   // 채팅방 정보 받아오기
   useEffect(() => {
+    // GET 요청
     axiosApi
       .get(`/channels`)
       .then((res) => res.data)

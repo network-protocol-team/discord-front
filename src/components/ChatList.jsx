@@ -52,26 +52,13 @@ export default function ChatList() {
         // 새롭게 생성한 채팅방으로 이동
         navigation(`/channels/${channelId}`);
       })
-      .catch((err) => {
-        // 채널 이름 중복시 에러 메시지 설정
-        setErrorMessage(err.message);
-      });
+      .catch((err) => console.error(err));
 
     e.preventDefault();
   };
 
-  const deleteAllCookies = () => {
-    const cookies = document.cookie.split(";");
-
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i];
-      const eqPos = cookie.indexOf("=");
-      const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-    }
-  };
-
   const logout = () => {
+    // TODO: 쿠키 및 클라이언트 상태 삭제
     const isLogout = confirm('정말로 로그아웃 하시겠습니까?');
 
     if (!isLogout) return;
@@ -101,11 +88,6 @@ export default function ChatList() {
               defaultValue=""
             />
             <button className="submit">채널 생성</button>
-            {errorMessage !== '' ? (
-              <p className="error-text">{errorMessage}</p>
-            ) : (
-              <></>
-            )}
           </form>
         </div>
       </Modal>

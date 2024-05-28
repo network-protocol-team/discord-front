@@ -43,9 +43,23 @@ export default function TextChatRoom() {
   };
 
   const connect = () => {
-    const socket = new SockJS(import.meta.env.VITE_SOCK_URL);
+    if (chatSocket.current && chatSocket.current.connected) {
+      console.log("Socket is already connected");
+      return;
+    }
+
     chatSocket.current = new StompJs.Client({
-      webSocketFactory: () => socket,
+      brokerURL: import.meta.env.VITE_SOCK_URL,
+      connectHeaders: {
+        login: "guest",
+        passcode: "guest",
+      },
+      debug: (str) => {
+        console.log(str);
+      },
+      reconnectDelay: 5000, // 자동 재 연결
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
       onConnect: () => {
         console.log("Connected to chat webSocket");
 
@@ -54,18 +68,16 @@ export default function TextChatRoom() {
           chatUpdate
         );
       },
-      onDisconnect: () => {
-        console.log("Disconnected from chat webSocket");
-      },
-      debug: (str) => {
-        console.log(str);
+      onStompError: (frame) => {
+        console.error(frame);
       },
     });
+
     chatSocket.current.activate();
   };
 
   const disconnect = () => {
-    if (chatSocket.current) {
+    if (chatSocket.current && chatSocket.current.connected) {
       chatSocket.current.deactivate();
     }
   };
@@ -73,6 +85,7 @@ export default function TextChatRoom() {
   const chatUpdate = (message) => {
     const json_body = JSON.parse(message.body).result;
     setChatArray((_chat_list) => [..._chat_list, json_body]);
+    console.log(message.body);
   };
 
   const handleChange = (event) => {
@@ -82,6 +95,13 @@ export default function TextChatRoom() {
   const handleSubmit = (event) => {
     event.preventDefault();
     publish(chat);
+  };
+
+  const handleKeyPress = (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      handleSubmit(event);
+    }
   };
 
   const loadChats = (e) => {
@@ -103,8 +123,6 @@ export default function TextChatRoom() {
         ]);
 
         setChatArray(newChats);
-
-        console.log(chatArray);
       });
 
     if (e) e.preventDefault();
@@ -125,7 +143,10 @@ export default function TextChatRoom() {
   };
 
   useEffect(() => {
-    loadChats();
+    if (chatSocket.current) {
+      disconnect();
+    }
+
     connect();
     return () => disconnect();
   }, [selectedId]);
@@ -149,6 +170,7 @@ export default function TextChatRoom() {
               ref={textareaRef}
               rows={1}
               onChange={handleChangeAndResize}
+              onKeyPress={handleKeyPress}
               value={chat}
             />
             <SendIcon onClick={handleSubmit} />
@@ -166,11 +188,7 @@ const Message = ({ chatArray }) => {
         <div className="message" key={index}>
           <Profile src={ProfileImage} />
           <div className="message-body">
-            <header>
-              <span className="name">{chat[0]}</span>
-              <span className="time">{chat[1]}</span>
-            </header>
-            <p>{chat[2]}</p>
+            <p>{chat}</p>
           </div>
         </div>
       ))}
