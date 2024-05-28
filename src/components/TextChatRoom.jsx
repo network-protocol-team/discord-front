@@ -6,15 +6,15 @@ import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
 import { useChatStore } from '../data/store';
 import { axiosApi } from '../utils/axios';
 import * as StompJs from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 import { parseMessage } from '../utils/socket';
 
 export default function TextChatRoom() {
-  const channels = useChatStore((state) => state.channels);
+  const selectedChatRoom = useChatStore((state) => state.selectedChatRoom);
   const selectedId = useChatStore((state) => state.selectedId);
   const selectedNickname = useChatStore((state) => state.nickName);
   const chatSocket = useRef(null);
   const textareaRef = useRef();
+  const messageWrapperRef = useRef();
   const [chatArray, setChatArray] = useState([]);
   const [refresh, setRefresh] = useState(false);
 
@@ -143,6 +143,13 @@ export default function TextChatRoom() {
 
     connect();
     loadChats();
+
+    setTimeout(() => {
+      console.log(messageWrapperRef.current);
+      messageWrapperRef.current.scrollTop =
+        messageWrapperRef.current?.scrollHeight -
+        messageWrapperRef.current?.clientHeight;
+    }, 1000);
     return () => disconnect();
   }, [selectedId]);
 
@@ -152,10 +159,10 @@ export default function TextChatRoom() {
         <div className="text-room">
           <header className="text-room-header">
             <ChatBubbleIcon />
-            <h3 className="title">{channels?.channel_name}</h3>
+            <h3 className="title">{selectedChatRoom?.channelName}</h3>
           </header>
           <hr className="hr-light" />
-          <div className="message-list">
+          <div className="message-list" ref={messageWrapperRef}>
             <Message chatArray={chatArray} key={refresh} />
           </div>
           <div className="message-input">

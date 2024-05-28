@@ -4,15 +4,16 @@
 }
 
 .text-room {
-  height: 100%;
   display: flex;
-  flex-direction: column;
+  flex-flow: column;
   background-color: $background-secondary;
   margin: 0;
 
   padding: 16px;
   border-radius: 8px;
   height: calc(100% - 32px);
+
+  overflow: hidden;
 }
 
 .text-room-header {
@@ -30,11 +31,13 @@
 }
 
 .message-list {
-  height: 100%;
+  height: 720px;
   margin-bottom: 32px;
   display: flex;
   flex-direction: column;
-  justify-content: end;
+  overflow: auto;
+  overscroll-behavior-y: contain;
+  scroll-snap-type: y proximity;
 }
 
 .message {
@@ -42,6 +45,14 @@
   flex-direction: row;
 
   margin-top: 16px;
+
+  &:first-child {
+    margin-top: auto;
+  }
+
+  &:last-child {
+    scroll-snap-align: end;
+  }
 }
 
 .message-body {
