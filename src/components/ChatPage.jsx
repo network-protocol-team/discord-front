@@ -80,7 +80,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (userId !== getCookie('userId')) {
       // 잘못된 쿠키면 추방
-      //eject();
+      eject();
     }
   }, [userId]);
 
