@@ -5,15 +5,18 @@ import MicOffIcon from '@mui/icons-material/MicOff';
 import CallEndIcon from '@mui/icons-material/CallEnd';
 import { useChatStore } from '../data/store';
 import { Client } from '@stomp/stompjs';
-import { useEffect, useRef, useState } from 'react';
-import { sendToServer } from '../utils/socket';
+import { useEffect, useReducer, useRef, useState } from 'react';
+import { parseMessage, sendToServer } from '../utils/socket';
 import { sleep } from '../utils/common';
 import { Exception } from 'sass';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 export default function VideoChatRoom() {
   const navigation = useNavigate();
   const setSelectedId = useChatStore((state) => state.setSelectedId);
+
+  // 채널 id 변경해서 나간 사람들 강제 제거하기 위한 임시 state
+  const [willDeleteOutUser, forceDeleteOutUser] = useReducer((n) => n + 1, 0);
 
   // 소켓은 ref 로 관리
   const videoSocket = useRef(null);
@@ -24,7 +27,6 @@ export default function VideoChatRoom() {
   const nickName = useChatStore((state) => state.nickName);
   const userKey = nickName;
 
-  // const [otherUsers, setOtherUsers] = useState({});
   const [remoteStreams, setRemoteStreams] = useState({});
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
@@ -59,13 +61,13 @@ export default function VideoChatRoom() {
   };
 
   const connectVideoSocket = () => {
-    // const socket = new SockJS(import.meta.env.VITE_SOCK_URL);
     const camKey = nickName;
 
     videoSocket.current = new Client({
-      // webSocketFactory: () => socket,
       brokerURL: import.meta.env.VITE_SOCK_URL,
-      debug: () => {},
+      debug: (str) => {
+        // console.log(str);
+      },
       reconnectDelay: 5000, // 자동 재 연결
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
@@ -100,8 +102,6 @@ export default function VideoChatRoom() {
     });
     videoSocket.current.activate();
   };
-
-  const parseMessage = (message) => JSON.parse(message.body);
 
   // 나간 유저 찾기
   const findOutUsers = (userKeys) => {
@@ -278,6 +278,7 @@ export default function VideoChatRoom() {
         ...prevStreams,
         [targetId]: event.streams[0],
       }));
+      forceDeleteOutUser();
     };
 
     localStreamRef.current?.getTracks().forEach((track) => {
@@ -297,6 +298,9 @@ export default function VideoChatRoom() {
       localVideoRef.current.srcObject = null;
     }
 
+    setIsLocalStreamLoaded(false);
+    isNew.current = true;
+
     try {
       outUser();
     } catch {
@@ -308,8 +312,6 @@ export default function VideoChatRoom() {
       peerConnection.close(),
     );
     otherUsers.current = {};
-    // setOtherUsers({});
-    setRemoteStreams({});
 
     // 소켓 닫기
     videoSocket.current.deactivate();
@@ -324,6 +326,10 @@ export default function VideoChatRoom() {
 
     startLocalStream(); // 카메라, 마이크 on
     connectVideoSocket(); // 소켓 연결
+
+    // selectedId 변경 시 remoteStreams 초기화
+    setRemoteStreams({});
+    otherUsers.current = {};
 
     // component unmount 시 소켓 정리
     return () => {
@@ -348,7 +354,7 @@ export default function VideoChatRoom() {
 
     otherUsers.current = tempOtherUsers;
     setRemoteStreams(tempRemoteStreams);
-  }, [outUsers]);
+  }, [outUsers, willDeleteOutUser]);
 
   const toggleCamera = () => {
     const videoTrack = localStreamRef.current
@@ -389,26 +395,28 @@ export default function VideoChatRoom() {
             style={{ width: '300px', marginRight: '20px' }}
           />
         </div>
-        {Object.entries(remoteStreams).map(([peerId, stream]) => (
-          <div
-            key={peerId}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <span>{peerId}</span>
-            <video
-              ref={(video) => {
-                if (video) video.srcObject = stream;
+        {Object.entries(remoteStreams).map(([peerId, stream]) => {
+          return (
+            <div
+              key={peerId}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
               }}
-              className="video-p2p"
-              autoPlay
-              playsInline
-              style={{ width: '300px', marginRight: '20px' }}
-            />
-          </div>
-        ))}
+            >
+              <span>{peerId}</span>
+              <video
+                ref={(video) => {
+                  if (video) video.srcObject = stream;
+                }}
+                className="video-p2p"
+                autoPlay
+                playsInline
+                style={{ width: '300px', marginRight: '20px' }}
+              />
+            </div>
+          );
+        })}
       </div>
       <div className="video-buttons">
         <button
