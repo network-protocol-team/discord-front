@@ -6,7 +6,6 @@ import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
 import { useChatStore } from '../data/store';
 import { axiosApi } from '../utils/axios';
 import * as StompJs from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 import { parseMessage } from '../utils/socket';
 
 export default function TextChatRoom() {
@@ -80,11 +79,12 @@ export default function TextChatRoom() {
   const chatUpdate = (message) => {
     const json_body = parseMessage(message);
     const { nickName, content, createdAt } = json_body.result;
+    const newcreatedAt = createdAt.substring(0,10) + " " + createdAt.substring(11, 19)
     setChatArray((_chat_list) => [
       ..._chat_list,
-      { nickName, content, createdAt },
+      { nickName, content, createdAt: newcreatedAt },
     ]);
-    console.log(nickName, content, createdAt);
+    console.log(nickName, content, newcreatedAt);
   };
 
   const handleChange = (event) => {
