@@ -1,32 +1,33 @@
-import { useRef, useState, useEffect } from "react";
-import Profile from "./Profile";
-import ProfileImage from "../assets/sample.png";
-import SendIcon from "@mui/icons-material/Send";
-import ChatBubbleIcon from "@mui/icons-material/ChatBubble";
-import { useChatStore } from "../data/store";
-import { axiosApi } from "../utils/axios";
-import * as StompJs from "@stomp/stompjs";
-import SockJS from "sockjs-client";
+import { useRef, useState, useEffect } from 'react';
+import Profile from './Profile';
+import ProfileImage from '../assets/sample.png';
+import SendIcon from '@mui/icons-material/Send';
+import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
+import { useChatStore } from '../data/store';
+import { axiosApi } from '../utils/axios';
+import * as StompJs from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
+import { parseMessage } from '../utils/socket';
 
 export default function TextChatRoom() {
-  const selectedChatRoom = useChatStore((state) => state.selectedChatRoom);
+  const channels = useChatStore((state) => state.channels);
   const selectedId = useChatStore((state) => state.selectedId);
-  const selectedNickname = useChatStore((state) => state.selectedNickname);
+  const selectedNickname = useChatStore((state) => state.nickName);
   const chatSocket = useRef(null);
   const textareaRef = useRef();
   const [chatArray, setChatArray] = useState([]);
   const [refresh, setRefresh] = useState(false);
 
-  const [chat, setChat] = useState("");
+  const [chat, setChat] = useState('');
 
   const publish = (chat) => {
     if (!chatSocket.current || !chatSocket.current.connected) {
-      console.log("Socket is not connected");
+      console.log('Socket is not connected');
       return;
     }
 
     try {
-      console.log("Publishing chat:", chat);
+      console.log('Publishing chat:', chat);
 
       chatSocket.current.publish({
         destination: `/pub/channels/${selectedId}/text`,
@@ -36,36 +37,30 @@ export default function TextChatRoom() {
         }),
       });
 
-      setChat("");
+      setChat('');
     } catch (error) {
-      console.error("Failed to publish chat:", error);
+      console.error('Failed to publish chat:', error);
     }
   };
 
   const connect = () => {
     if (chatSocket.current && chatSocket.current.connected) {
-      console.log("Socket is already connected");
+      console.log('Socket is already connected');
       return;
     }
 
     chatSocket.current = new StompJs.Client({
       brokerURL: import.meta.env.VITE_SOCK_URL,
-      connectHeaders: {
-        login: "guest",
-        passcode: "guest",
-      },
-      debug: (str) => {
-        console.log(str);
-      },
+      debug: () => {},
       reconnectDelay: 5000, // 자동 재 연결
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       onConnect: () => {
-        console.log("Connected to chat webSocket");
+        console.log('Connected to chat webSocket');
 
         chatSocket.current.subscribe(
           `/sub/channels/${selectedId}/text`,
-          chatUpdate
+          chatUpdate,
         );
       },
       onStompError: (frame) => {
@@ -83,9 +78,13 @@ export default function TextChatRoom() {
   };
 
   const chatUpdate = (message) => {
-    const json_body = JSON.parse(message.body).result;
-    setChatArray((_chat_list) => [..._chat_list, json_body]);
-    console.log(message.body);
+    const json_body = parseMessage(message);
+    const { nickName, content, createdAt } = json_body.result;
+    setChatArray((_chat_list) => [
+      ..._chat_list,
+      { nickName, content, createdAt },
+    ]);
+    console.log(nickName, content, createdAt);
   };
 
   const handleChange = (event) => {
@@ -98,29 +97,24 @@ export default function TextChatRoom() {
   };
 
   const handleKeyPress = (event) => {
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       handleSubmit(event);
     }
   };
 
   const loadChats = (e) => {
-    const data = { selectedId };
     setChatArray([]);
 
     axiosApi
-      .get(`/channels/${selectedId}`, data)
+      .get(`/channels/${selectedId}`)
       .then((res) => res.data)
       .then(({ code, message, result }) => {
         if (code !== 200) {
           throw new Error(message);
         }
 
-        const newChats = result.messages.map((msg) => [
-          msg.username,
-          msg.created_at,
-          msg.content,
-        ]);
+        const newChats = [...result.messageList];
 
         setChatArray(newChats);
       });
@@ -129,8 +123,8 @@ export default function TextChatRoom() {
   };
 
   const handleResizeHeight = () => {
-    textareaRef.current.style.height = "auto";
-    textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
+    textareaRef.current.style.height = 'auto';
+    textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
   };
 
   const handleRefresh = () => {
@@ -148,6 +142,7 @@ export default function TextChatRoom() {
     }
 
     connect();
+    loadChats();
     return () => disconnect();
   }, [selectedId]);
 
@@ -157,7 +152,7 @@ export default function TextChatRoom() {
         <div className="text-room">
           <header className="text-room-header">
             <ChatBubbleIcon />
-            <h3 className="title">{selectedChatRoom?.channel_name}</h3>
+            <h3 className="title">{channels?.channel_name}</h3>
           </header>
           <hr className="hr-light" />
           <div className="message-list">
@@ -184,11 +179,15 @@ export default function TextChatRoom() {
 const Message = ({ chatArray }) => {
   return (
     <>
-      {chatArray.map((chat, index) => (
+      {chatArray.map(({ nickName, createdAt, content }, index) => (
         <div className="message" key={index}>
           <Profile src={ProfileImage} />
           <div className="message-body">
-            <p>{chat}</p>
+            <header>
+              <span className="name">{nickName}</span>
+              <span className="time">{createdAt}</span>
+            </header>
+            <p>{content}</p>
           </div>
         </div>
       ))}

@@ -2,7 +2,7 @@ import './styles/App.scss';
 import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
 import ChatPage from './components/ChatPage';
 import JoinPage from './components/JoinPage';
-import * as encoding from 'text-encoding';
+// import * as encoding from 'text-encoding';
 
 function App() {
   return (
