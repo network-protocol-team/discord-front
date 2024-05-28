@@ -5,15 +5,18 @@ import MicOffIcon from '@mui/icons-material/MicOff';
 import CallEndIcon from '@mui/icons-material/CallEnd';
 import { useChatStore } from '../data/store';
 import { Client } from '@stomp/stompjs';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import { parseMessage, sendToServer } from '../utils/socket';
 import { sleep } from '../utils/common';
 import { Exception } from 'sass';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 export default function VideoChatRoom() {
   const navigation = useNavigate();
   const setSelectedId = useChatStore((state) => state.setSelectedId);
+
+  // 채널 id 변경해서 나간 사람들 강제 제거하기 위한 임시 state
+  const [willDeleteOutUser, forceDeleteOutUser] = useReducer((n) => n + 1, 0);
 
   // 소켓은 ref 로 관리
   const videoSocket = useRef(null);
@@ -275,6 +278,7 @@ export default function VideoChatRoom() {
         ...prevStreams,
         [targetId]: event.streams[0],
       }));
+      forceDeleteOutUser();
     };
 
     localStreamRef.current?.getTracks().forEach((track) => {
@@ -308,8 +312,6 @@ export default function VideoChatRoom() {
       peerConnection.close(),
     );
     otherUsers.current = {};
-    // setOtherUsers({});
-    setRemoteStreams({});
 
     // 소켓 닫기
     videoSocket.current.deactivate();
@@ -352,7 +354,7 @@ export default function VideoChatRoom() {
 
     otherUsers.current = tempOtherUsers;
     setRemoteStreams(tempRemoteStreams);
-  }, [outUsers]);
+  }, [outUsers, willDeleteOutUser]);
 
   const toggleCamera = () => {
     const videoTrack = localStreamRef.current

@@ -145,7 +145,6 @@ export default function TextChatRoom() {
     loadChats();
 
     setTimeout(() => {
-      console.log(messageWrapperRef.current);
       messageWrapperRef.current.scrollTop =
         messageWrapperRef.current?.scrollHeight -
         messageWrapperRef.current?.clientHeight;

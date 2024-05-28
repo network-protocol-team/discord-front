@@ -128,10 +128,6 @@ const ChatListItem = ({ channelName, channelId, publish }) => {
   const navigate = useNavigate();
   const selectedId = useChatStore((state) => state.selectedId);
   const selectItem = async (id) => {
-    navigate(`/channels`);
-
-    // 소켓 정리를 위해 io bound job 수행
-    await sleep(1);
     navigate(`/channels/${id}`);
   };
   const nickName = useChatStore((state) => state.nickName);

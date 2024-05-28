@@ -80,7 +80,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (userId !== getCookie('userId')) {
       // 잘못된 쿠키면 추방
-      //eject();
+      // eject();
     }
   }, [userId]);
 
@@ -94,7 +94,7 @@ export default function ChatPage() {
 
     setSelectedId(channelId);
     setSelectedChatRoom(currRoom);
-  }, [channelId, setSelectedChatRoom, setSelectedId, channels]);
+  }, [channelId, channels]);
 
   // 채팅방 정보 받아오기
   useEffect(() => {
