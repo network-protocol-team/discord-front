@@ -11,6 +11,7 @@ export default ({ mode }) => {
     },
     plugins: [react()],
     server: {
+      port: 5173,
       proxy: {
         '/api': {
           target: `${env.VITE_SERVER_URL}`,
