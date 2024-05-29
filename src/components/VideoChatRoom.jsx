@@ -7,7 +7,7 @@ import { useChatStore } from '../data/store';
 import { Client } from '@stomp/stompjs';
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { parseMessage, sendToServer } from '../utils/socket';
-import { sleep } from '../utils/common';
+import { Timer } from '../utils/common';
 import { Exception } from 'sass';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -17,6 +17,9 @@ export default function VideoChatRoom() {
 
   // 채널 id 변경해서 나간 사람들 강제 제거하기 위한 임시 state
   const [willDeleteOutUser, forceDeleteOutUser] = useReducer((n) => n + 1, 0);
+
+  // timer init
+  const timer = new Timer(1000);
 
   // 소켓은 ref 로 관리
   const videoSocket = useRef(null);
@@ -49,7 +52,11 @@ export default function VideoChatRoom() {
   const startLocalStream = async () => {
     try {
       localStreamRef.current = await navigator.mediaDevices.getUserMedia({
-        video: true,
+        video: {
+          width: { min: 10, ideal: 720, max: 720 },
+          height: { min: 10, ideal: 480, max: 480 },
+          frameRate: { ideal: 15 },
+        },
         audio: true,
       });
       localVideoRef.current.srcObject = localStreamRef.current;
@@ -189,7 +196,11 @@ export default function VideoChatRoom() {
     // 새로 들어온 사람만 offer 보내기
     if (isNew.current) {
       // local stream 갱신을 위한 io-bound job 수행
-      await sleep(1000);
+      timer.reset();
+      await timer.start();
+
+      // timer 가 중간에 abort 되면 중단
+      if (timer.isAborted) return;
 
       await Promise.all(
         userKeys.map(async (receiver) => {
@@ -291,7 +302,10 @@ export default function VideoChatRoom() {
   const endCall = () => {
     // 카메라, 마이크 off
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((track) => track.stop());
+      localStreamRef.current.getTracks().forEach((track) => {
+        console.log(track);
+        track.stop();
+      });
       localStreamRef.current = null;
     }
     if (localVideoRef.current) {
@@ -327,6 +341,8 @@ export default function VideoChatRoom() {
     if (videoSocket.current) {
       endCall();
     }
+
+    timer.abort(); // 타이머 중지
 
     startLocalStream(); // 카메라, 마이크 on
     connectVideoSocket(); // 소켓 연결

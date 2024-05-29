@@ -9,7 +9,6 @@ import { useNavigate } from 'react-router-dom';
 import { useChatStore, useTempStore } from '../data/store';
 import { axiosApi } from '../utils/axios';
 import { useEject } from '../hooks/users';
-import { sleep } from '../utils/common';
 
 export default function ChatList({ publish }) {
   const navigation = useNavigate();
