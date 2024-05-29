@@ -298,6 +298,10 @@ export default function VideoChatRoom() {
       localVideoRef.current.srcObject = null;
     }
 
+    // state reset
+    setIsCameraOn(true);
+    setIsMicOn(true);
+
     setIsLocalStreamLoaded(false);
     isNew.current = true;
 
