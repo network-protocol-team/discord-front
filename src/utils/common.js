@@ -2,6 +2,8 @@ export const logClient = (msg) => {
   console.log(`[DEBUG]: ${msg}`);
 };
 
+export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export class Timer {
   originalMs = 0;
   id = undefined;

@@ -102,6 +102,8 @@ export default function TextChatRoom() {
   const loadChats = (e) => {
     setChatArray([]);
 
+    if (selectedId === '') return;
+
     axiosApi
       .get(`/channels/${selectedId}`)
       .then((res) => res.data)

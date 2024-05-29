@@ -7,7 +7,7 @@ import { useChatStore } from '../data/store';
 import { Client } from '@stomp/stompjs';
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { parseMessage, sendToServer } from '../utils/socket';
-import { Timer } from '../utils/common';
+import { Timer, sleep } from '../utils/common';
 import { Exception } from 'sass';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -335,11 +335,11 @@ export default function VideoChatRoom() {
     videoSocket.current.deactivate();
   };
 
-  // 소켓 activate 및 deactivate
-  useEffect(() => {
+  const init = async () => {
     // 이미 소켓이 있으면 정리해준다
-    if (videoSocket.current) {
+    if (videoSocket.current && videoSocket.current.connected) {
       endCall();
+      await sleep(1000);
     }
 
     timer.abort(); // 타이머 중지
@@ -350,16 +350,23 @@ export default function VideoChatRoom() {
     // selectedId 변경 시 remoteStreams 초기화
     setRemoteStreams({});
     otherUsers.current = {};
+  };
 
+  // 소켓 activate 및 deactivate
+  useEffect(() => {
+    init();
     // component unmount 시 소켓 정리
     return () => {
-      endCall();
+      if (videoSocket.current && videoSocket.current.connected) {
+        endCall();
+      }
     };
   }, [selectedId]);
 
   useEffect(() => {
     if (isLocalStreamLoaded) {
       // 먼저 채널에 접속했음을 알린다.
+
       joinUser();
     }
   }, [isLocalStreamLoaded]);
