@@ -7,11 +7,13 @@
 export const sendToServer =
   (socketRef) =>
   (destination, body, headers = {}) => {
-    socketRef.current.publish({
-      destination,
-      body: JSON.stringify(body),
-      headers,
-    });
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.publish({
+        destination,
+        body: JSON.stringify(body),
+        headers,
+      });
+    }
   };
 
 export const parseMessage = (message) => JSON.parse(message.body);

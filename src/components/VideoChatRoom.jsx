@@ -53,8 +53,8 @@ export default function VideoChatRoom() {
     try {
       localStreamRef.current = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { min: 10, ideal: 720, max: 720 },
-          height: { min: 10, ideal: 480, max: 480 },
+          width: { min: 10, ideal: 360, max: 360 },
+          height: { min: 10, ideal: 270, max: 270 },
           frameRate: { ideal: 15 },
         },
         audio: true,
